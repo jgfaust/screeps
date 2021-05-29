@@ -3513,14 +3513,18 @@ function filter(collection, predicate) {
 
 var filter_1 = filter;
 
+const maxHarvesters = 5;
 const NAME_ID = (() => {
     let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
     return () => initial++;
 })();
 module.exports.loop = function () {
     const creeps = Game.creeps;
-    filter_1(creeps, (c) => c.memory.type == Harvester.type);
+    const harvesters = filter_1(creeps, (c) => c.memory.type == Harvester.type);
     filter_1(creeps, (c) => c.memory.type == Upgrader.type);
+    if (harvesters.length < maxHarvesters) {
+        Harvester.create();
+    }
     const roles = Object.values(Roles);
     Object.keys(creeps).forEach((c) => {
         var _a;
