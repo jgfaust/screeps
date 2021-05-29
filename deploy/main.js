@@ -105,8 +105,19 @@ const Harvester = {
                 if (creep.store.getFreeCapacity() === creep.store.getCapacity()) {
                     creep.memory.creepState = HarvesterState.Harvesting;
                 }
-                else if (creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(Game.spawns.Spawn1);
+                else {
+                    const spawnStore = Game.spawns.Spawn1.store;
+                    if (spawnStore[RESOURCE_ENERGY] < spawnStore.getCapacity(RESOURCE_ENERGY)) {
+                        if (creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                            creep.moveTo(Game.spawns.Spawn1);
+                        }
+                    }
+                    else {
+                        const controller = creep.room.controller;
+                        if (controller && creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+                            creep.moveTo(controller);
+                        }
+                    }
                 }
                 break;
             default:
@@ -124,6 +135,7 @@ var UpgraderState;
 const Upgrader = {
     type: "Upgrader",
     create() {
+        // todo - adjust based on distance to controller
         return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), {
             memory: {
                 creepState: UpgraderState.Harvesting,
@@ -167,9 +179,82 @@ const Upgrader = {
     }
 };
 
+var BuilderState;
+(function (BuilderState) {
+    BuilderState[BuilderState["Harvesting"] = 0] = "Harvesting";
+    BuilderState[BuilderState["Building"] = 1] = "Building";
+})(BuilderState || (BuilderState = {}));
+const Builder = {
+    type: "Builder",
+    create() {
+        return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), {
+            memory: {
+                creepState: BuilderState.Harvesting,
+                type: this.type
+            }
+        });
+    },
+    run(creep) {
+        const { creepState } = creep.memory;
+        const source = creep.pos.findClosestByPath(FIND_SOURCES);
+        const controller = creep.room.controller;
+        if (!source) {
+            console.log("No source found");
+            return;
+        }
+        if (!controller) {
+            console.log("No controller found");
+            return;
+        }
+        switch (creepState) {
+            case BuilderState.Harvesting:
+                if (creep.store.getFreeCapacity() === 0) {
+                    creep.memory.creepState = BuilderState.Building;
+                }
+                else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source);
+                }
+                break;
+            case BuilderState.Building:
+                if (creep.store.getFreeCapacity() === creep.store.getCapacity()) {
+                    creep.memory.creepState = HarvesterState.Harvesting;
+                }
+                else {
+                    const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
+                    const spawnStore = Game.spawns.Spawn1.store;
+                    if (sites.length) {
+                        sites.sort((a, b) => a.progress - b.progress);
+                        const site = sites[sites.length - 1];
+                        if (creep.build(site) == ERR_NOT_IN_RANGE) {
+                            creep.moveTo(site);
+                        }
+                    }
+                    else {
+                        if (spawnStore[RESOURCE_ENERGY] < spawnStore.getCapacity(RESOURCE_ENERGY)) {
+                            if (creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                                creep.moveTo(Game.spawns.Spawn1);
+                            }
+                        }
+                        else {
+                            const controller = creep.room.controller;
+                            if (controller && creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+                                creep.moveTo(controller);
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                creep.memory.creepState = BuilderState.Harvesting;
+                break;
+        }
+    }
+};
+
 const Roles = {
     Harvester,
-    Upgrader
+    Upgrader,
+    Builder
 };
 
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
@@ -3523,22 +3608,23 @@ function filter(collection, predicate) {
 
 var filter_1 = filter;
 
-const maxHarvesters = 5;
-const maxUpgraders = 5;
+const MAX_CREEPS = {
+    [Harvester.type]: 5,
+    [Upgrader.type]: 5,
+    [Builder.type]: 5,
+};
 const NAME_ID = (() => {
     let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
     return () => initial++;
 })();
 module.exports.loop = function () {
     const creeps = Game.creeps;
-    const harvesters = filter_1(creeps, (c) => c.memory.type == Harvester.type);
-    const upgrader = filter_1(creeps, (c) => c.memory.type == Upgrader.type);
-    if (harvesters.length < maxHarvesters) {
-        Harvester.create();
-    }
-    if (upgrader.length < maxUpgraders) {
-        Upgrader.create();
-    }
+    Object.keys(MAX_CREEPS).forEach((k) => {
+        const kcreeps = filter_1(creeps, (c) => c.memory.type == k);
+        if (kcreeps.length < MAX_CREEPS[k]) {
+            Roles[k].create();
+        }
+    });
     const roles = Object.values(Roles);
     Object.keys(creeps).forEach((c) => {
         var _a;

@@ -2,9 +2,14 @@ import {Roles} from './Roles';
 import filter from 'lodash/filter';
 import {Harvester} from "./Roles.Harvester";
 import {Upgrader} from "./Roles.Upgrader";
+import {Builder} from "./Roles.Builder";
 
-const maxHarvesters = 5;
-const maxUpgraders = 5;
+const MAX_CREEPS = {
+   [Harvester.type]: 5,
+   [Upgrader.type]: 5,
+   [Builder.type]: 5,
+};
+
 export const NAME_ID = (() => {
    let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
    return () => initial++;
@@ -12,15 +17,13 @@ export const NAME_ID = (() => {
 
 module.exports.loop = function() {
    const creeps = Game.creeps;
-   const harvesters = filter(creeps, (c) => c.memory.type == Harvester.type);
-   const upgrader = filter(creeps, (c) => c.memory.type == Upgrader.type);
 
-   if(harvesters.length < maxHarvesters) {
-      Harvester.create();
-   }
-   if(upgrader.length < maxUpgraders) {
-      Upgrader.create();
-   }
+   Object.keys(MAX_CREEPS).forEach((k) => {
+      const kcreeps = filter(creeps, (c) => c.memory.type == k);
+      if(kcreeps.length < MAX_CREEPS[k]) {
+         Roles[k].create();
+      }
+   });
 
    const roles = Object.values(Roles);
    Object.keys(creeps).forEach((c) => {

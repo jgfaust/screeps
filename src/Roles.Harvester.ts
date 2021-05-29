@@ -108,8 +108,18 @@ export const Harvester: CreepRole = {
          case HarvesterState.Transferring:
             if(creep.store.getFreeCapacity() === creep.store.getCapacity()) {
                creep.memory.creepState = HarvesterState.Harvesting;
-            } else if(creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-               creep.moveTo(Game.spawns.Spawn1);
+            } else {
+               const spawnStore = Game.spawns.Spawn1.store;
+               if(spawnStore[RESOURCE_ENERGY] < spawnStore.getCapacity(RESOURCE_ENERGY)) {
+                  if(creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                     creep.moveTo(Game.spawns.Spawn1);
+                  }
+               } else {
+                  const controller = creep.room.controller;
+                  if(controller && creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+                     creep.moveTo(controller);
+                  }
+               }
             }
             break;
          default:

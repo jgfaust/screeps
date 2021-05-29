@@ -9,6 +9,7 @@ export enum UpgraderState {
 export const Upgrader: CreepRole = {
    type: "Upgrader",
    create(): ScreepsReturnCode {
+      // todo - adjust based on distance to controller
       return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY],
          this.type + NAME_ID(), {
             memory: {
