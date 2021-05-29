@@ -73,7 +73,12 @@ module.exports = roleHarvester;
 const Harvester = {
     type: "Harvester",
     create() {
-        return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), { type: this.type });
+        return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), {
+            memory: {
+                creepState: HarvesterState.Harvesting,
+                type: this.type
+            }
+        });
     },
     run(creep) {
         if (creep.memory.type !== this.type) {
@@ -119,7 +124,12 @@ var UpgraderState;
 const Upgrader = {
     type: "Upgrader",
     create() {
-        return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), { type: this.type });
+        return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY], this.type + NAME_ID(), {
+            memory: {
+                creepState: UpgraderState.Harvesting,
+                type: this.type
+            }
+        });
     },
     run(creep) {
         const { creepState } = creep.memory;
