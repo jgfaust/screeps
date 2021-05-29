@@ -86,9 +86,10 @@ const Harvester = {
             console.log("No source found");
             return;
         }
+        // console.log(`${creep.name}: capacity ${creep.store.getFreeCapacity()}`);
         switch (creepState) {
             case HarvesterState.Harvesting:
-                if (creep.store.getFreeCapacity() === creep.store.getCapacity()) {
+                if (creep.store.getFreeCapacity() === 0) {
                     creep.memory.creepState = HarvesterState.Transferring;
                 }
                 else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
@@ -96,7 +97,7 @@ const Harvester = {
                 }
                 break;
             case HarvesterState.Transferring:
-                if (creep.store.getFreeCapacity() > 0) {
+                if (creep.store.getFreeCapacity() === creep.store.getCapacity()) {
                     creep.memory.creepState = HarvesterState.Harvesting;
                 }
                 else if (creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
