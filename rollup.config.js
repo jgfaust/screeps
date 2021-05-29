@@ -29,6 +29,6 @@ export default {
       commonjs(),
       typescript({tsconfig: "./tsconfig.json"}),
       screeps({config: cfg, dryRun: cfg == null}),
-      copy({ hook: 'closeBundle', verbose: true, targets: [{src: 'dist/*.js', dest: '../'}]}),
+      copy({ hook: 'closeBundle', verbose: true, targets: [{src: 'dist/*.js', dest: 'deploy/'}]}),
    ]
 };
