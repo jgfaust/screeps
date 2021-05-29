@@ -1,14 +1,12 @@
-import {Harvester, HarvesterState} from "./Roles.Harvester";
-import {Upgrader, UpgraderState} from "./Roles.Upgrader";
-import {Builder, BuilderState} from "./Roles.Builder";
+import {Harvester} from "./Roles.Harvester";
+import {Upgrader} from "./Roles.Upgrader";
+import {Builder} from "./Roles.Builder";
+import {CreepRole} from "./CreepRole";
 
-export interface CreepRole {
-   type: string;
-   create(): ScreepsReturnCode;
-   run(creep: Creep): void;
+export enum CreepState {
+   Harvesting,
+   Working
 }
-
-export type CreepState = HarvesterState | UpgraderState | BuilderState;
 
 export const Roles: { [K: string]: CreepRole } = {
    Harvester,
