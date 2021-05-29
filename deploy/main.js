@@ -145,7 +145,7 @@ const Upgrader = {
         }
         switch (creepState) {
             case UpgraderState.Harvesting:
-                if (creep.store.getFreeCapacity() === creep.store.getCapacity()) {
+                if (creep.store.getFreeCapacity() === 0) {
                     creep.memory.creepState = UpgraderState.Upgrading;
                 }
                 else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
@@ -3524,6 +3524,7 @@ function filter(collection, predicate) {
 var filter_1 = filter;
 
 const maxHarvesters = 5;
+const maxUpgraders = 5;
 const NAME_ID = (() => {
     let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
     return () => initial++;
@@ -3531,9 +3532,12 @@ const NAME_ID = (() => {
 module.exports.loop = function () {
     const creeps = Game.creeps;
     const harvesters = filter_1(creeps, (c) => c.memory.type == Harvester.type);
-    filter_1(creeps, (c) => c.memory.type == Upgrader.type);
+    const upgrader = filter_1(creeps, (c) => c.memory.type == Upgrader.type);
     if (harvesters.length < maxHarvesters) {
         Harvester.create();
+    }
+    if (upgrader.length < maxUpgraders) {
+        Upgrader.create();
     }
     const roles = Object.values(Roles);
     Object.keys(creeps).forEach((c) => {

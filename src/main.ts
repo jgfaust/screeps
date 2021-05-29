@@ -1,9 +1,32 @@
 import {Roles} from './Roles';
+import filter from 'lodash/filter';
+import {Harvester} from "./Roles.Harvester";
+import {Upgrader} from "./Roles.Upgrader";
+
+const maxHarvesters = 5;
+const maxUpgraders = 5;
+export const NAME_ID = (() => {
+   let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
+   return () => initial++;
+})();
 
 module.exports.loop = function() {
    const creeps = Game.creeps;
-   Object.keys(creeps).forEach((c) =>
-      Roles.Harvester.run(creeps[c]));
+   const harvesters = filter(creeps, (c) => c.memory.type == Harvester.type);
+   const upgrader = filter(creeps, (c) => c.memory.type == Upgrader.type);
+
+   if(harvesters.length < maxHarvesters) {
+      Harvester.create();
+   }
+   if(upgrader.length < maxUpgraders) {
+      Upgrader.create();
+   }
+
+   const roles = Object.values(Roles);
+   Object.keys(creeps).forEach((c) => {
+      const creep = creeps[c];
+      roles.find((r) => r.type === creep.memory.type)?.run(creep);
+   });
 };
 
 

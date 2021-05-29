@@ -1,9 +1,11 @@
 import {CreepRole} from "./Roles";
+import {NAME_ID} from "./main";
 
 export enum HarvesterState {
    Harvesting,
    Transferring
 }
+
 /*
 Game.spawns['Spawn1'].spawnCreep( [WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE],
     'HarvesterBig',
@@ -69,7 +71,23 @@ module.exports = roleHarvester;
  */
 
 export const Harvester: CreepRole = {
+   type: "Harvester",
+
+   create(): ScreepsReturnCode {
+      return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY],
+         this.type + NAME_ID(), {
+            memory: {
+               creepState: HarvesterState.Harvesting,
+               type: this.type
+            }
+         });
+   },
+
    run(creep): void {
+      if(creep.memory.type !== this.type) {
+         console.log(`Harvester tried running creep of type ${creep.memory.type}`);
+         return;
+      }
       const {creepState} = creep.memory;
       const source = creep.pos.findClosestByPath(FIND_SOURCES);
       if(!source) {
@@ -77,16 +95,18 @@ export const Harvester: CreepRole = {
          return;
       }
 
+      // console.log(`${creep.name}: capacity ${creep.store.getFreeCapacity()}`);
+
       switch(creepState) {
          case HarvesterState.Harvesting:
-            if(creep.store.getFreeCapacity() === creep.store.getCapacity()) {
+            if(creep.store.getFreeCapacity() === 0) {
                creep.memory.creepState = HarvesterState.Transferring;
             } else if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
                creep.moveTo(source);
             }
             break;
          case HarvesterState.Transferring:
-            if(creep.store.getFreeCapacity() > 0) {
+            if(creep.store.getFreeCapacity() === creep.store.getCapacity()) {
                creep.memory.creepState = HarvesterState.Harvesting;
             } else if(creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                creep.moveTo(Game.spawns.Spawn1);
@@ -97,4 +117,4 @@ export const Harvester: CreepRole = {
             break;
       }
    }
-}
+};

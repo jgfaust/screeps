@@ -30,5 +30,6 @@ export default {
       typescript({tsconfig: "./tsconfig.json"}),
       screeps({config: cfg, dryRun: cfg == null}),
       copy({ hook: 'closeBundle', verbose: true, targets: [{src: 'dist/*.js', dest: 'deploy/'}]}),
+      copy({ hook: 'closeBundle', verbose: true, targets: [{src: 'dist/*.js', dest: '../private-link'}]}),
    ]
 };
