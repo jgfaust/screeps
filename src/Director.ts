@@ -1,8 +1,15 @@
 import {CreepRole} from "./CreepRole";
 import {NAME_ID} from "./Utils";
 import {CreepState} from "./CreepState";
+import {ScavengeAction} from "./Action.Scavenge";
+import {HarvestAction} from "./Action.Harvest";
 
 const _ = require("lodash");
+
+const HARVEST = [
+   ScavengeAction,
+   HarvestAction
+];
 
 export const Director = {
    create(role: CreepRole, room: Room): ScreepsReturnCode {
@@ -29,7 +36,7 @@ export const Director = {
                // console.log("bodyParts", JSON.stringify(bodyParts));
             });
 
-            console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
+            // console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
             _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
 
             /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
@@ -58,15 +65,19 @@ export const Director = {
 
       switch(creepState) {
          case CreepState.Harvesting:
-            const source = creep.pos.findClosestByPath(FIND_SOURCES);
-            if(!source) {
-               console.log(creep.name, ": can't find path to source");
-               return;
-            }
             if(creep.store.getFreeCapacity() === 0) {
                creep.memory.creepState = CreepState.Working;
-            } else if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
-               creep.moveTo(source);
+            } else {
+               let resourceAvailable = false;
+               for(let i = 0; i < HARVEST.length; i++) {
+                  if(HARVEST[i].do(creep)) {
+                     resourceAvailable = true;
+                     break;
+                  }
+               }
+               if(!resourceAvailable && creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                  creep.memory.creepState = CreepState.Working;
+               }
             }
             break;
          case CreepState.Working:

@@ -14,7 +14,15 @@ function closestByMostDamaged(creep: Creep) {
 
 function closestByDamage(creep: Creep, threshhold: number) {
    return creep.pos.findClosestByRange(FIND_STRUCTURES, {
-      filter: (structure: AnyStructure) => structure.hits / structure.hitsMax < threshhold
+      filter: (structure: AnyStructure) => {
+         switch(structure.structureType) {
+            case STRUCTURE_WALL:
+            case STRUCTURE_RAMPART:
+               return structure.hits / structure.hitsMax < threshhold;
+            default:
+               return structure.hits / structure.hitsMax < .9;
+         }
+      }
    });
 }
 

@@ -8,8 +8,8 @@ import {RepairAction} from "./Action.Repair";
 export const Harvester: CreepRole = {
    type: "Harvester",
    bodyRatios: {
-      [WORK]: 40,
-      [CARRY]: 40,
+      [WORK]: 20,
+      [CARRY]: 60,
       [MOVE]: 20
    },
    actions: [

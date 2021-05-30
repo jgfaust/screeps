@@ -8,7 +8,7 @@ const _ = require('lodash');
 
 const MAX_CREEPS = {
    [Builder.type]: 5,
-   [Upgrader.type]: 3,
+   [Upgrader.type]: 4,
    [Harvester.type]: 3,
 };
 

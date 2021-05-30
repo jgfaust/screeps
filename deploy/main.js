@@ -101,7 +101,15 @@ function closestByMostDamaged(creep) {
 }
 function closestByDamage(creep, threshhold) {
     return creep.pos.findClosestByRange(FIND_STRUCTURES, {
-        filter: (structure) => structure.hits / structure.hitsMax < threshhold
+        filter: (structure) => {
+            switch (structure.structureType) {
+                case STRUCTURE_WALL:
+                case STRUCTURE_RAMPART:
+                    return structure.hits / structure.hitsMax < threshhold;
+                default:
+                    return structure.hits / structure.hitsMax < .9;
+            }
+        }
     });
 }
 const RepairAction = {
@@ -126,8 +134,8 @@ const RepairAction = {
 const Harvester = {
     type: "Harvester",
     bodyRatios: {
-        [WORK]: 40,
-        [CARRY]: 40,
+        [WORK]: 20,
+        [CARRY]: 60,
         [MOVE]: 20
     },
     actions: [
@@ -153,8 +161,8 @@ const Upgrader = {
 const Builder = {
     type: "Builder",
     bodyRatios: {
-        [WORK]: 50,
-        [CARRY]: 30,
+        [WORK]: 60,
+        [CARRY]: 20,
         [MOVE]: 20
     },
     actions: [
@@ -199,7 +207,65 @@ var CreepState;
     CreepState[CreepState["Working"] = 1] = "Working";
 })(CreepState || (CreepState = {}));
 
+const ScavengeAction = {
+    name: "Scavenge",
+    do(creep) {
+        let source = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+            filter: (r) => r.resourceType === RESOURCE_ENERGY &&
+                r.amount > 0
+        });
+        if (source) {
+            if (creep.pickup(source) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(source);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+        else {
+            source = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
+                filter: (r) => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+            });
+            if (source) {
+                if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source);
+                    return true;
+                }
+                else {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+};
+
+const HarvestAction = {
+    name: "Harvest",
+    do(creep) {
+        const source = creep.pos.findClosestByPath(FIND_SOURCES);
+        if (!source) {
+            console.log(creep.name, ": can't find path to active source");
+            return false;
+        }
+        else {
+            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(source);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+    }
+};
+
 const _$1 = require("lodash");
+const HARVEST = [
+    ScavengeAction,
+    HarvestAction
+];
 const Director = {
     create(role, room) {
         // todo add harvester failsafe when num harvesters == 0
@@ -224,7 +290,7 @@ const Director = {
                     _$1.times(chunkCount, () => bodyParts.push(part));
                     // console.log("bodyParts", JSON.stringify(bodyParts));
                 });
-                console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
+                // console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
                 _$1.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
                 /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
                    " gives these parts ", bodyParts);*/
@@ -251,16 +317,20 @@ const Director = {
         const { creepState } = creep.memory;
         switch (creepState) {
             case CreepState.Harvesting:
-                const source = creep.pos.findClosestByPath(FIND_SOURCES);
-                if (!source) {
-                    console.log(creep.name, ": can't find path to source");
-                    return;
-                }
                 if (creep.store.getFreeCapacity() === 0) {
                     creep.memory.creepState = CreepState.Working;
                 }
-                else if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source);
+                else {
+                    let resourceAvailable = false;
+                    for (let i = 0; i < HARVEST.length; i++) {
+                        if (HARVEST[i].do(creep)) {
+                            resourceAvailable = true;
+                            break;
+                        }
+                    }
+                    if (!resourceAvailable && creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                        creep.memory.creepState = CreepState.Working;
+                    }
                 }
                 break;
             case CreepState.Working:
@@ -287,7 +357,7 @@ const Director = {
 const _ = require('lodash');
 const MAX_CREEPS = {
     [Builder.type]: 5,
-    [Upgrader.type]: 3,
+    [Upgrader.type]: 4,
     [Harvester.type]: 3,
 };
 module.exports.loop = function () {

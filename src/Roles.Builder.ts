@@ -7,8 +7,8 @@ import {FillEnergyAction} from "./Action.FillEnergy";
 export const Builder: CreepRole = {
    type: "Builder",
    bodyRatios: {
-      [WORK]: 50,
-      [CARRY]: 30,
+      [WORK]: 60,
+      [CARRY]: 20,
       [MOVE]: 20
    },
    actions: [
