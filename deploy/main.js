@@ -1,6 +1,23 @@
 'use strict';
 
-require("lodash");
+const UpgradeControllerAction = {
+    name: "UpgradeController",
+    do(creep) {
+        const controller = creep.room.controller;
+        if (controller) {
+            if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+                creep.moveTo(controller);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+        console.log("UpgradeControllerAction: No controller found");
+        return false;
+    }
+};
+
 const FillEnergyAction = {
     name: "FillEnergy",
     do(creep) {
@@ -52,42 +69,32 @@ const FillEnergyAction = {
         return false;
     }
 };
-const UpgradeControllerAction = {
-    name: "UpgradeController",
-    do(creep) {
-        const controller = creep.room.controller;
-        if (controller) {
-            if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(controller);
-                return true;
-            }
-            else {
-                return true;
-            }
-        }
-        console.log("UpgradeControllerAction: No controller found");
-        return false;
-    }
+
+const Harvester = {
+    type: "Harvester",
+    bodyRatios: {
+        [WORK]: 40,
+        [CARRY]: 40,
+        [MOVE]: 20
+    },
+    actions: [
+        FillEnergyAction,
+        UpgradeControllerAction,
+    ],
 };
-const BuildAction = {
-    name: "Build",
-    do(creep) {
-        const sites = creep.room.find(FIND_CONSTRUCTION_SITES);
-        if (sites.length) {
-            sites.sort((a, b) => a.progress - b.progress);
-            const site = sites[sites.length - 1];
-            if (creep.build(site) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(site);
-                return true;
-            }
-            else {
-                return true;
-            }
-        }
-        // console.log("BuildAction: No sites found");
-        return false;
-    }
+
+const Upgrader = {
+    type: "Upgrader",
+    bodyRatios: {
+        [WORK]: 35,
+        [CARRY]: 35,
+        [MOVE]: 30,
+    },
+    actions: [
+        UpgradeControllerAction
+    ],
 };
+
 function closestByMostDamaged(creep) {
     let t = .0001;
     while (t <= 1) {
@@ -123,29 +130,22 @@ const RepairAction = {
     }
 };
 
-const Harvester = {
-    type: "Harvester",
-    bodyRatios: {
-        [WORK]: 40,
-        [CARRY]: 40,
-        [MOVE]: 20
-    },
-    actions: [
-        FillEnergyAction,
-        UpgradeControllerAction,
-    ],
-};
-
-const Upgrader = {
-    type: "Upgrader",
-    bodyRatios: {
-        [WORK]: 35,
-        [CARRY]: 35,
-        [MOVE]: 30,
-    },
-    actions: [
-        UpgradeControllerAction
-    ],
+const BuildAction = {
+    name: "Build",
+    do(creep) {
+        const site = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+        if (site) {
+            if (creep.build(site) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(site);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+        // console.log("BuildAction: No sites found");
+        return false;
+    }
 };
 
 const Builder = {

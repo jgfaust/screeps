@@ -1,5 +1,6 @@
 import {CreepRole} from "./CreepRole";
-import {FillEnergyAction, UpgradeControllerAction} from "./WorkerActions";
+import {UpgradeControllerAction} from "./Action.UpgradeController";
+import {FillEnergyAction} from "./Action.FillEnergy";
 
 export const Upgrader: CreepRole = {
    type: "Upgrader",

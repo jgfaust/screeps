@@ -1,5 +1,8 @@
 import {CreepRole} from "./CreepRole";
-import {BuildAction, FillEnergyAction, RepairAction, UpgradeControllerAction} from "./WorkerActions";
+import {RepairAction} from "./Action.Repair";
+import {BuildAction} from "./Action.Build";
+import {UpgradeControllerAction} from "./Action.UpgradeController";
+import {FillEnergyAction} from "./Action.FillEnergy";
 
 export const Builder: CreepRole = {
    type: "Builder",
