@@ -206,7 +206,7 @@ const Director = {
         const spawn = room.find(FIND_MY_SPAWNS);
         if (spawn.length) {
             const capacity = room.energyCapacityAvailable;
-            if (room.energyAvailable < capacity) {
+            if (room.energyAvailable === capacity) {
                 const bodyParts = [];
                 let remaining = capacity;
                 // console.log("capacity", capacity);
