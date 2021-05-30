@@ -2,37 +2,60 @@ import {Roles} from './Roles';
 import {Harvester} from "./Roles.Harvester";
 import {Upgrader} from "./Roles.Upgrader";
 import {Builder} from "./Roles.Builder";
+import {Tower} from "./Tower";
+import {Director} from "./Director";
 const _ = require('lodash');
 
 const MAX_CREEPS = {
    [Builder.type]: 5,
-   [Upgrader.type]: 5,
-   [Harvester.type]: 5,
+   [Upgrader.type]: 3,
+   [Harvester.type]: 3,
 };
-
 
 module.exports.loop = function() {
    const creeps = Game.creeps;
 
-   /*
-   console.log('echo');
    Object.keys(Memory.creeps).forEach((k) => {
-      console.log(k, Game.creeps[k]?.ticksToLive);
-      if(!Game.creeps[k]?.ticksToLive) {
+      if(!Game.creeps[k]) {
          delete Memory.creeps[k];
-      }
-   });*/
-
-   Object.keys(MAX_CREEPS).forEach((k) => {
-      const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
-      if(kcreeps.length < MAX_CREEPS[k]) {
-         Roles[k].create();
       }
    });
 
    const roles = Object.values(Roles);
    Object.keys(creeps).forEach((c) => {
       const creep = creeps[c];
-      roles.find((r) => r.type === creep.memory.type)?.run(creep);
+      const role = roles.find((r) => r.type === creep.memory.type);
+      if(role && creep) {
+         Director.run(role, creep);
+      } else {
+         console.log("Couldn't find a role for creep", creep, role);
+      }
+   });
+
+   Object.keys(Game.rooms).forEach((k) => {
+      const room = Game.rooms[k];
+
+      Object.keys(MAX_CREEPS).forEach((k) => {
+         const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
+         if(kcreeps.length < MAX_CREEPS[k]) {
+            Director.create(Roles[k], room);
+         }
+      });
+
+      const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, {
+         filter: {structureType: STRUCTURE_TOWER}
+      }) as StructureTower[];
+      if(towers.length) {
+         towers.forEach((tower) => {
+            const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+            if(hostile) {
+               if(tower.attack(hostile) === ERR_NOT_IN_RANGE) {
+                  Tower.run(tower);
+               }
+            } else {
+               towers.forEach(Tower.run);
+            }
+         });
+      }
    });
 };

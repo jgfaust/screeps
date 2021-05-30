@@ -1,27 +1,16 @@
-import {NAME_ID} from "./Utils";
-import {Action, FillEnergyAction, UpgradeControllerAction, workerCreepRun} from "./WorkerActions";
+import {FillEnergyAction, UpgradeControllerAction,} from "./WorkerActions";
 import {CreepRole} from "./CreepRole";
-import {CreepState} from "./Roles";
+import {Action} from "./Action";
 
 export const Harvester: CreepRole & {actions: Action[]} = {
    type: "Harvester",
-
-   create(): ScreepsReturnCode {
-      return Game.spawns.Spawn1.spawnCreep([WORK, WORK, MOVE, CARRY],
-         this.type + NAME_ID(), {
-            memory: {
-               creepState: CreepState.Harvesting,
-               type: this.type
-            }
-         });
+   bodyRatios: {
+      [WORK]: 40,
+      [CARRY]: 40,
+      [MOVE]: 20
    },
-
    actions: [
       FillEnergyAction,
       UpgradeControllerAction,
    ],
-
-   run: function(creep) {
-      workerCreepRun(this, creep);
-   }
 };

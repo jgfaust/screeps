@@ -1,8 +1,9 @@
-import {Action} from "./WorkerActions";
+import {Action} from "./Action";
+
+type bp = keyof BodyPartConstant;
 
 export interface CreepRole {
    type: string;
-   create(): ScreepsReturnCode;
-   run(creep: Creep): void;
+   bodyRatios: {[K: string]: number};
    actions: Action[];
 }

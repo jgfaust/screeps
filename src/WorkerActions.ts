@@ -1,29 +1,43 @@
-import {CreepState} from "./Roles";
-import {CreepRole} from "./CreepRole";
+import {Action} from "./Action";
 
-export interface Action {
-   name: string;
-   do: (creep: Creep) => boolean;
-}
+const _ = require("lodash");
 
 export const FillEnergyAction: Action = {
    name: "FillEnergy",
    do(creep: Creep): boolean {
+      // todo - prioritize defensive energy such as towers
       const room = creep.room;
       if(room) {
-         const structs = room.find(FIND_MY_STRUCTURES, {
+         let spawns = creep.room.find(FIND_MY_SPAWNS, {
             filter: (s) => {
                if("store" in s) {
-                  return s.store[RESOURCE_ENERGY] < s.store.getFreeCapacity(RESOURCE_ENERGY);
+                  return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
                }
                return false;
             }
          });
+         if(spawns.length) {
+            if(creep.transfer(spawns[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+               creep.moveTo(spawns[0]);
+               return true;
+            } else {
+               return true;
+            }
+         }
+         const struct = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+            filter: (s) => {
+               if("store" in s) {
+                  return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+               }
+               return false;
+            }
+         });
+
          // @ts-ignore
          // console.log(structs.length, structs.map((s) => s.store[RESOURCE_ENERGY]));
-         if(structs.length) {
-            if(creep.transfer(structs[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-               creep.moveTo(structs[0]);
+         if(struct) {
+            if(creep.transfer(struct, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+               creep.moveTo(struct);
                return true;
             } else {
                return true;
@@ -75,12 +89,29 @@ export const BuildAction: Action = {
    }
 };
 
+function closestByMostDamaged(creep: Creep) {
+   let t = .05;
+   while(t <= 1) {
+      const s = closestByDamage(creep, t);
+      if(s) {
+         return s;
+      }
+      t += .05;
+   }
+   return null;
+}
+
+function closestByDamage(creep: Creep, threshhold: number) {
+   return creep.pos.findClosestByRange(FIND_STRUCTURES, {
+      filter: (structure: AnyStructure) => structure.hits / structure.hitsMax < threshhold
+   });
+}
+
 export const RepairAction: Action = {
    name: "Repair",
    do(creep: Creep): boolean {
-      const closestDamagedStructure = creep.pos.findClosestByRange(FIND_STRUCTURES, {
-         filter: (structure) => structure.hits < structure.hitsMax
-      });
+      // todo prioritize defensive structures
+      const closestDamagedStructure = closestByMostDamaged(creep);
       if(closestDamagedStructure) {
          if(creep.repair(closestDamagedStructure) == ERR_NOT_IN_RANGE) {
             creep.moveTo(closestDamagedStructure);
@@ -94,41 +125,3 @@ export const RepairAction: Action = {
    }
 };
 
-export function workerCreepRun(role: CreepRole, creep: Creep): void {
-   if(creep.memory.type !== role.type) {
-      console.log(`Harvester tried running creep of type ${creep.memory.type}`);
-      return;
-   }
-   const {creepState} = creep.memory;
-   const source = creep.pos.findClosestByPath(FIND_SOURCES);
-   if(!source) {
-      console.log("Creep can't find path to source");
-      return;
-   }
-
-   switch(creepState) {
-      case CreepState.Harvesting:
-         if(creep.store.getFreeCapacity() === 0) {
-            creep.memory.creepState = CreepState.Working;
-         } else if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
-            creep.moveTo(source);
-         }
-         break;
-      case CreepState.Working:
-         if(creep.store.energy === 0) {
-            creep.say("Harvesting");
-            creep.memory.creepState = CreepState.Harvesting;
-         } else {
-            for(let i = 0; i < role.actions.length; i++) {
-               if(role.actions[i].do(creep)) {
-                  creep.say(role.actions[i].name);
-                  break;
-               }
-            }
-         }
-         break;
-      default:
-         creep.memory.creepState = CreepState.Harvesting;
-         break;
-   }
-}

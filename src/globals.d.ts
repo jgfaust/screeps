@@ -1,5 +1,5 @@
 interface CreepMemory {
-   creepState: import("./Roles").CreepState;
+   creepState: import("./CreepState").CreepState;
    type: string;
 }
 
