@@ -38,12 +38,17 @@ module.exports.loop = function() {
       const room = Game.rooms[k];
 
       const maxCreepKeys = Object.keys(MAX_CREEPS);
-      for(let i in maxCreepKeys) {
-         let k = maxCreepKeys[i];
-         const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
-         if(kcreeps.length < MAX_CREEPS[k]) {
-            Director.create(Roles[k], room);
-            break;
+      const harvesters = _.filter(creeps, (c: Creep) => c.memory.type == Harvester.type);
+      if(!harvesters.length) {
+         Director.create(Harvester, room, true);
+      } else {
+         for(let i in maxCreepKeys) {
+            let k = maxCreepKeys[i];
+            const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
+            if(kcreeps.length < MAX_CREEPS[k]) {
+               Director.create(Roles[k], room);
+               break;
+            }
          }
       }
 

@@ -24,17 +24,18 @@ const FillEnergyAction = {
         // todo - prioritize defensive energy such as towers
         const room = creep.room;
         if (room) {
-            let spawns = creep.room.find(FIND_MY_SPAWNS, {
+            const defense = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s) => {
                     if ("store" in s) {
-                        return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+                        return s.structureType === STRUCTURE_TOWER &&
+                            s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
                     }
                     return false;
                 }
             });
-            if (spawns.length) {
-                if (creep.transfer(spawns[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(spawns[0]);
+            if (defense) {
+                if (creep.transfer(defense, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(defense);
                     return true;
                 }
                 else {
@@ -44,7 +45,8 @@ const FillEnergyAction = {
             const struct = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s) => {
                     if ("store" in s) {
-                        return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+                        return s.structureType != STRUCTURE_STORAGE &&
+                            s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
                     }
                     return false;
                 }
@@ -54,6 +56,23 @@ const FillEnergyAction = {
             if (struct) {
                 if (creep.transfer(struct, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                     creep.moveTo(struct);
+                    return true;
+                }
+                else {
+                    return true;
+                }
+            }
+            const spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS, {
+                filter: (s) => {
+                    if ("store" in s) {
+                        return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+                    }
+                    return false;
+                }
+            });
+            if (spawn) {
+                if (creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(spawn);
                     return true;
                 }
                 else {
@@ -103,11 +122,12 @@ function closestByDamage$1(creep, threshhold) {
     return creep.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: (structure) => {
             switch (structure.structureType) {
-                case STRUCTURE_WALL:
                 case STRUCTURE_RAMPART:
-                    return structure.hits / structure.hitsMax < threshhold;
+                    return structure.hits < structure.hitsMax;
+                case STRUCTURE_WALL:
+                    return (structure.hits / structure.hitsMax) < threshhold;
                 default:
-                    return structure.hits / structure.hitsMax < .9;
+                    return (structure.hits / structure.hitsMax) < .9;
             }
         }
     });
@@ -308,7 +328,22 @@ const ScavengeAction = {
 const HarvestAction = {
     name: "Harvest",
     do(creep) {
-        const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+        let source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+        /*      if(!source) {
+                 let storage = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+                    filter: (s) =>
+                       s.structureType === STRUCTURE_STORAGE &&
+                       s.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+                 });
+                 if(storage) {
+                    if(creep.withdraw(storage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                       creep.moveTo(storage);
+                       return true;
+                    } else {
+                       return true;
+                    }
+                 }
+              }*/
         if (!source) {
             console.log(creep.name, ": can't find path to active source");
             return false;
@@ -331,11 +366,14 @@ const HARVEST = [
     HarvestAction
 ];
 const Director = {
-    create(role, room) {
+    create(role, room, force) {
         // todo add harvester failsafe when num harvesters == 0
         const spawn = room.find(FIND_MY_SPAWNS);
         if (spawn.length) {
-            const capacity = room.energyCapacityAvailable;
+            if (room.energyAvailable > 300) {
+                force = true;
+            }
+            const capacity = force ? room.energyAvailable : room.energyCapacityAvailable;
             if (room.energyAvailable === capacity) {
                 const bodyParts = [];
                 let remaining = capacity;
@@ -358,7 +396,7 @@ const Director = {
                 _$1.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
                 /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
                    " gives these parts ", bodyParts);*/
-                const spawnCode = spawn[0].spawnCreep(bodyParts, role.type + NAME_ID(), {
+                const spawnCode = spawn[0].spawnCreep(bodyParts, `${room.name}_${role.type}_${NAME_ID()}`, {
                     memory: {
                         creepState: CreepState.Harvesting,
                         type: role.type
@@ -446,12 +484,18 @@ module.exports.loop = function () {
     Object.keys(Game.rooms).forEach((k) => {
         const room = Game.rooms[k];
         const maxCreepKeys = Object.keys(MAX_CREEPS);
-        for (let i in maxCreepKeys) {
-            let k = maxCreepKeys[i];
-            const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
-            if (kcreeps.length < MAX_CREEPS[k]) {
-                Director.create(Roles[k], room);
-                break;
+        const harvesters = _.filter(creeps, (c) => c.memory.type == Harvester.type);
+        if (!harvesters.length) {
+            Director.create(Harvester, room, true);
+        }
+        else {
+            for (let i in maxCreepKeys) {
+                let k = maxCreepKeys[i];
+                const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
+                if (kcreeps.length < MAX_CREEPS[k]) {
+                    Director.create(Roles[k], room);
+                    break;
+                }
             }
         }
         const towers = room.find(FIND_MY_STRUCTURES, {

@@ -12,11 +12,14 @@ const HARVEST = [
 ];
 
 export const Director = {
-   create(role: CreepRole, room: Room): ScreepsReturnCode {
+   create(role: CreepRole, room: Room, force?: boolean): ScreepsReturnCode {
       // todo add harvester failsafe when num harvesters == 0
       const spawn = room.find(FIND_MY_SPAWNS);
       if(spawn.length) {
-         const capacity = room.energyCapacityAvailable;
+         if(room.energyAvailable > 300) {
+            force = true;
+         }
+         const capacity = force ? room.energyAvailable : room.energyCapacityAvailable;
          if(room.energyAvailable === capacity) {
             const bodyParts: BodyPartConstant[] = [];
             let remaining = capacity;
@@ -41,7 +44,8 @@ export const Director = {
 
             /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
                " gives these parts ", bodyParts);*/
-            const spawnCode = spawn[0].spawnCreep(bodyParts, role.type + NAME_ID(), {
+            const spawnCode = spawn[0].spawnCreep(bodyParts,
+               `${room.name}_${role.type}_${NAME_ID()}`, {
                memory: {
                   creepState: CreepState.Harvesting,
                   type: role.type

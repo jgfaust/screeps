@@ -6,26 +6,30 @@ export const FillEnergyAction: Action = {
       // todo - prioritize defensive energy such as towers
       const room = creep.room;
       if(room) {
-         let spawns = creep.room.find(FIND_MY_SPAWNS, {
+         const defense = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
             filter: (s) => {
                if("store" in s) {
-                  return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+                  return s.structureType === STRUCTURE_TOWER &&
+                     s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
                }
                return false;
             }
          });
-         if(spawns.length) {
-            if(creep.transfer(spawns[0], RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-               creep.moveTo(spawns[0]);
+
+         if(defense) {
+            if(creep.transfer(defense, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+               creep.moveTo(defense);
                return true;
             } else {
                return true;
             }
          }
+
          const struct = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
             filter: (s) => {
                if("store" in s) {
-                  return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+                  return s.structureType != STRUCTURE_STORAGE &&
+                     s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
                }
                return false;
             }
@@ -41,6 +45,24 @@ export const FillEnergyAction: Action = {
                return true;
             }
          }
+
+         const spawn = creep.pos.findClosestByPath(FIND_MY_SPAWNS, {
+            filter: (s) => {
+               if("store" in s) {
+                  return s.store[RESOURCE_ENERGY] < s.store.getCapacity(RESOURCE_ENERGY);
+               }
+               return false;
+            }
+         });
+         if(spawn) {
+            if(creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+               creep.moveTo(spawn);
+               return true;
+            } else {
+               return true;
+            }
+         }
+
       } else {
          console.log("FillSpawnAction: No room provided, can't find structures");
          return false;
