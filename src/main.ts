@@ -7,9 +7,9 @@ import {Director} from "./Director";
 const _ = require('lodash');
 
 const MAX_CREEPS = {
-   [Builder.type]: 5,
+   [Builder.type]: 3,
    [Upgrader.type]: 4,
-   [Harvester.type]: 3,
+   [Harvester.type]: 2,
 };
 
 module.exports.loop = function() {

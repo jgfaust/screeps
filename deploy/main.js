@@ -210,7 +210,7 @@ var CreepState;
 const ScavengeAction = {
     name: "Scavenge",
     do(creep) {
-        let source = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
+        const source = creep.pos.findClosestByPath(FIND_DROPPED_RESOURCES, {
             filter: (r) => r.resourceType === RESOURCE_ENERGY &&
                 r.amount > 0
         });
@@ -224,16 +224,30 @@ const ScavengeAction = {
             }
         }
         else {
-            source = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
+            const tomb = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
                 filter: (r) => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0
             });
-            if (source) {
-                if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source);
+            if (tomb) {
+                if (creep.withdraw(tomb, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(tomb);
                     return true;
                 }
                 else {
                     return true;
+                }
+            }
+            else {
+                const ruin = creep.pos.findClosestByPath(FIND_RUINS, {
+                    filter: (r) => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+                });
+                if (ruin) {
+                    if (creep.withdraw(ruin, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(ruin);
+                        return true;
+                    }
+                    else {
+                        return true;
+                    }
                 }
             }
         }
@@ -356,9 +370,9 @@ const Director = {
 
 const _ = require('lodash');
 const MAX_CREEPS = {
-    [Builder.type]: 5,
+    [Builder.type]: 3,
     [Upgrader.type]: 4,
-    [Harvester.type]: 3,
+    [Harvester.type]: 2,
 };
 module.exports.loop = function () {
     const creeps = Game.creeps;
