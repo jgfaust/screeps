@@ -70,29 +70,22 @@ const FillEnergyAction = {
     }
 };
 
-const Harvester = {
-    type: "Harvester",
-    bodyRatios: {
-        [WORK]: 40,
-        [CARRY]: 40,
-        [MOVE]: 20
-    },
-    actions: [
-        FillEnergyAction,
-        UpgradeControllerAction,
-    ],
-};
-
-const Upgrader = {
-    type: "Upgrader",
-    bodyRatios: {
-        [WORK]: 35,
-        [CARRY]: 35,
-        [MOVE]: 30,
-    },
-    actions: [
-        UpgradeControllerAction
-    ],
+const BuildAction = {
+    name: "Build",
+    do(creep) {
+        const site = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
+        if (site) {
+            if (creep.build(site) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(site);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+        // console.log("BuildAction: No sites found");
+        return false;
+    }
 };
 
 function closestByMostDamaged(creep) {
@@ -130,22 +123,31 @@ const RepairAction = {
     }
 };
 
-const BuildAction = {
-    name: "Build",
-    do(creep) {
-        const site = creep.pos.findClosestByRange(FIND_CONSTRUCTION_SITES);
-        if (site) {
-            if (creep.build(site) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(site);
-                return true;
-            }
-            else {
-                return true;
-            }
-        }
-        // console.log("BuildAction: No sites found");
-        return false;
-    }
+const Harvester = {
+    type: "Harvester",
+    bodyRatios: {
+        [WORK]: 40,
+        [CARRY]: 40,
+        [MOVE]: 20
+    },
+    actions: [
+        FillEnergyAction,
+        BuildAction,
+        RepairAction,
+        UpgradeControllerAction,
+    ],
+};
+
+const Upgrader = {
+    type: "Upgrader",
+    bodyRatios: {
+        [WORK]: 35,
+        [CARRY]: 35,
+        [MOVE]: 30,
+    },
+    actions: [
+        UpgradeControllerAction
+    ],
 };
 
 const Builder = {
