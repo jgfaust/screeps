@@ -132,9 +132,9 @@ const Harvester = {
     },
     actions: [
         FillEnergyAction,
+        UpgradeControllerAction,
         BuildAction,
         RepairAction,
-        UpgradeControllerAction,
     ],
 };
 
@@ -224,7 +224,8 @@ const Director = {
                     _$1.times(chunkCount, () => bodyParts.push(part));
                     // console.log("bodyParts", JSON.stringify(bodyParts));
                 });
-                console.log(role.type, ": remaining capacity", remaining);
+                console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
+                _$1.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
                 /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
                    " gives these parts ", bodyParts);*/
                 const spawnCode = spawn[0].spawnCreep(bodyParts, role.type + NAME_ID(), {

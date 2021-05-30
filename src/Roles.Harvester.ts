@@ -14,8 +14,8 @@ export const Harvester: CreepRole = {
    },
    actions: [
       FillEnergyAction,
+      UpgradeControllerAction,
       BuildAction,
       RepairAction,
-      UpgradeControllerAction,
    ],
 };

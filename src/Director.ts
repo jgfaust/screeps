@@ -1,6 +1,7 @@
 import {CreepRole} from "./CreepRole";
 import {NAME_ID} from "./Utils";
 import {CreepState} from "./CreepState";
+
 const _ = require("lodash");
 
 export const Director = {
@@ -9,36 +10,42 @@ export const Director = {
       const spawn = room.find(FIND_MY_SPAWNS);
       if(spawn.length) {
          const capacity = room.energyCapacityAvailable;
-         const bodyParts: BodyPartConstant[] = [];
-         let remaining = capacity;
-         // console.log("capacity", capacity);
-         let bodyRatioSum = 0;
-         Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
-         Object.keys(role.bodyRatios).forEach((k) => {
-            const part: BodyPartConstant = k as BodyPartConstant;
-            // console.log("part ", part);
-            // console.log("bodypart_cost ", BODYPART_COST[part]);
-            const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
-            // console.log("portion ", portion);
-            const chunkCount = Math.floor(portion / BODYPART_COST[part]);
-            // console.log("chunkCount ", chunkCount);
-            remaining -= (chunkCount * BODYPART_COST[part]);
-            _.times(chunkCount, () => bodyParts.push(part));
-            // console.log("bodyParts", JSON.stringify(bodyParts));
-         });
+         if(room.energyAvailable === capacity) {
+            const bodyParts: BodyPartConstant[] = [];
+            let remaining = capacity;
+            // console.log("capacity", capacity);
+            let bodyRatioSum = 0;
+            Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
+            Object.keys(role.bodyRatios).forEach((k) => {
+               const part: BodyPartConstant = k as BodyPartConstant;
+               // console.log("part ", part);
+               // console.log("bodypart_cost ", BODYPART_COST[part]);
+               const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
+               // console.log("portion ", portion);
+               const chunkCount = Math.floor(portion / BODYPART_COST[part]);
+               // console.log("chunkCount ", chunkCount);
+               remaining -= (chunkCount * BODYPART_COST[part]);
+               _.times(chunkCount, () => bodyParts.push(part));
+               // console.log("bodyParts", JSON.stringify(bodyParts));
+            });
 
-         /*console.log(role.type, ": remaining capacity", remaining);
-         console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
-            " gives these parts ", bodyParts);*/
-         const spawnCode = spawn[0].spawnCreep(bodyParts, role.type + NAME_ID(), {
-            memory: {
-               creepState: CreepState.Harvesting,
-               type: role.type
-            }
-         });
+            console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
+            _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
 
-         // console.log(role.type, ": spawnCode", spawnCode);
-         return spawnCode;
+            /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
+               " gives these parts ", bodyParts);*/
+            const spawnCode = spawn[0].spawnCreep(bodyParts, role.type + NAME_ID(), {
+               memory: {
+                  creepState: CreepState.Harvesting,
+                  type: role.type
+               }
+            });
+
+            // console.log(role.type, ": spawnCode", spawnCode);
+            return spawnCode;
+         } else {
+            return ERR_NOT_ENOUGH_ENERGY;
+         }
       }
       return ERR_NOT_FOUND;
    },
@@ -53,7 +60,7 @@ export const Director = {
          case CreepState.Harvesting:
             const source = creep.pos.findClosestByPath(FIND_SOURCES);
             if(!source) {
-               console.log(role.type, ": can't find path to source");
+               console.log(creep.name, ": can't find path to source");
                return;
             }
             if(creep.store.getFreeCapacity() === 0) {
