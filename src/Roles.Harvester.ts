@@ -5,7 +5,7 @@ import {FillEnergyAction} from "./Action.FillEnergy";
 import {BuildAction} from "./Action.Build";
 import {RepairAction} from "./Action.Repair";
 
-export const Harvester: CreepRole & {actions: Action[]} = {
+export const Harvester: CreepRole = {
    type: "Harvester",
    bodyRatios: {
       [WORK]: 40,

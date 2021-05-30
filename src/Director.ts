@@ -48,14 +48,14 @@ export const Director = {
          return;
       }
       const {creepState} = creep.memory;
-      const source = creep.pos.findClosestByPath(FIND_SOURCES);
-      if(!source) {
-         console.log("Creep can't find path to source");
-         return;
-      }
 
       switch(creepState) {
          case CreepState.Harvesting:
+            const source = creep.pos.findClosestByPath(FIND_SOURCES);
+            if(!source) {
+               console.log("Creep can't find path to source");
+               return;
+            }
             if(creep.store.getFreeCapacity() === 0) {
                creep.memory.creepState = CreepState.Working;
             } else if(creep.harvest(source) === ERR_NOT_IN_RANGE) {
