@@ -91,7 +91,7 @@ const BuildAction = {
 function closestByMostDamaged(creep) {
     let t = .0001;
     while (t <= 1) {
-        const s = closestByDamage(creep, t);
+        const s = closestByDamage$1(creep, t);
         if (s) {
             return s;
         }
@@ -99,7 +99,7 @@ function closestByMostDamaged(creep) {
     }
     return null;
 }
-function closestByDamage(creep, threshhold) {
+function closestByDamage$1(creep, threshhold) {
     return creep.pos.findClosestByRange(FIND_STRUCTURES, {
         filter: (structure) => {
             switch (structure.structureType) {
@@ -131,27 +131,59 @@ const RepairAction = {
     }
 };
 
+function closestByDamage(creep) {
+    return creep.pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: (structure) => {
+            switch (structure.structureType) {
+                case STRUCTURE_WALL:
+                case STRUCTURE_RAMPART:
+                    return false;
+                default:
+                    return structure.hits < structure.hitsMax;
+            }
+        }
+    });
+}
+const MunicipalRepairAction = {
+    name: "MunicipalRepair",
+    do(creep) {
+        const closestDamagedStructure = closestByDamage(creep);
+        if (closestDamagedStructure) {
+            if (creep.repair(closestDamagedStructure) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(closestDamagedStructure);
+                return true;
+            }
+            else {
+                return true;
+            }
+        }
+        // console.log("BuildAction: No sites found");
+        return false;
+    }
+};
+
 const Harvester = {
     type: "Harvester",
     bodyRatios: {
-        [WORK]: 20,
-        [CARRY]: 60,
+        [WORK]: 40,
+        [CARRY]: 40,
         [MOVE]: 20
     },
     actions: [
         FillEnergyAction,
-        UpgradeControllerAction,
+        MunicipalRepairAction,
         BuildAction,
         RepairAction,
+        UpgradeControllerAction,
     ],
 };
 
 const Upgrader = {
     type: "Upgrader",
     bodyRatios: {
-        [WORK]: 35,
+        [WORK]: 45,
         [CARRY]: 35,
-        [MOVE]: 30,
+        [MOVE]: 20,
     },
     actions: [
         UpgradeControllerAction
@@ -161,13 +193,30 @@ const Upgrader = {
 const Builder = {
     type: "Builder",
     bodyRatios: {
-        [WORK]: 60,
-        [CARRY]: 20,
+        [WORK]: 50,
+        [CARRY]: 30,
         [MOVE]: 20
     },
     actions: [
         BuildAction,
         RepairAction,
+        MunicipalRepairAction,
+        FillEnergyAction,
+        UpgradeControllerAction
+    ],
+};
+
+const Repair = {
+    type: "Repair",
+    bodyRatios: {
+        [WORK]: 50,
+        [CARRY]: 30,
+        [MOVE]: 20
+    },
+    actions: [
+        MunicipalRepairAction,
+        RepairAction,
+        BuildAction,
         FillEnergyAction,
         UpgradeControllerAction
     ],
@@ -176,7 +225,8 @@ const Builder = {
 const Roles = {
     Harvester,
     Upgrader,
-    Builder
+    Builder,
+    Repair,
 };
 
 const Tower = {
@@ -258,7 +308,7 @@ const ScavengeAction = {
 const HarvestAction = {
     name: "Harvest",
     do(creep) {
-        const source = creep.pos.findClosestByPath(FIND_SOURCES);
+        const source = creep.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
         if (!source) {
             console.log(creep.name, ": can't find path to active source");
             return false;
@@ -370,9 +420,10 @@ const Director = {
 
 const _ = require('lodash');
 const MAX_CREEPS = {
+    [Harvester.type]: 2,
+    [Repair.type]: 1,
     [Builder.type]: 3,
     [Upgrader.type]: 4,
-    [Harvester.type]: 2,
 };
 module.exports.loop = function () {
     const creeps = Game.creeps;
@@ -394,12 +445,15 @@ module.exports.loop = function () {
     });
     Object.keys(Game.rooms).forEach((k) => {
         const room = Game.rooms[k];
-        Object.keys(MAX_CREEPS).forEach((k) => {
+        const maxCreepKeys = Object.keys(MAX_CREEPS);
+        for (let i in maxCreepKeys) {
+            let k = maxCreepKeys[i];
             const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
             if (kcreeps.length < MAX_CREEPS[k]) {
                 Director.create(Roles[k], room);
+                break;
             }
-        });
+        }
         const towers = room.find(FIND_MY_STRUCTURES, {
             filter: { structureType: STRUCTURE_TOWER }
         });

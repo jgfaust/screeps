@@ -5,17 +5,17 @@ import {UpgradeControllerAction} from "./Action.UpgradeController";
 import {FillEnergyAction} from "./Action.FillEnergy";
 import {MunicipalRepairAction} from "./Action.MunicipalRepair";
 
-export const Builder: CreepRole = {
-   type: "Builder",
+export const Repair: CreepRole = {
+   type: "Repair",
    bodyRatios: {
       [WORK]: 50,
       [CARRY]: 30,
       [MOVE]: 20
    },
    actions: [
-      BuildAction,
-      RepairAction,
       MunicipalRepairAction,
+      RepairAction,
+      BuildAction,
       FillEnergyAction,
       UpgradeControllerAction
    ],
