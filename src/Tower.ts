@@ -4,7 +4,7 @@ export const Tower = {
          filter: (s) => s.hits < s.hitsMax
       });
       if(nearbyDamagedStructure) {
-         tower.repair(nearbyDamagedStructure);
+         // tower.repair(nearbyDamagedStructure);
       } else {
          const nearbyDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
             filter: (s) => s.hits < s.hitsMax

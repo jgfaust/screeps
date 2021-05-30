@@ -89,13 +89,13 @@ const BuildAction = {
     }
 };
 function closestByMostDamaged(creep) {
-    let t = .05;
+    let t = .0001;
     while (t <= 1) {
         const s = closestByDamage(creep, t);
         if (s) {
             return s;
         }
-        t += .05;
+        t += .005;
     }
     return null;
 }
@@ -174,9 +174,7 @@ const Tower = {
         const nearbyDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax
         });
-        if (nearbyDamagedStructure) {
-            tower.repair(nearbyDamagedStructure);
-        }
+        if (nearbyDamagedStructure) ;
         else {
             const nearbyDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
                 filter: (s) => s.hits < s.hitsMax

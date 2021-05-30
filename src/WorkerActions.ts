@@ -90,13 +90,13 @@ export const BuildAction: Action = {
 };
 
 function closestByMostDamaged(creep: Creep) {
-   let t = .05;
+   let t = .0001;
    while(t <= 1) {
       const s = closestByDamage(creep, t);
       if(s) {
          return s;
       }
-      t += .05;
+      t += .005;
    }
    return null;
 }
