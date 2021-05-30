@@ -53,7 +53,7 @@ export const Director = {
          case CreepState.Harvesting:
             const source = creep.pos.findClosestByPath(FIND_SOURCES);
             if(!source) {
-               console.log("Creep can't find path to source");
+               console.log(role.type, ": can't find path to source");
                return;
             }
             if(creep.store.getFreeCapacity() === 0) {
