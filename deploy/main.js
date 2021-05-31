@@ -152,17 +152,33 @@ const RepairAction = {
 };
 
 function closestByDamage(creep) {
-    return creep.pos.findClosestByRange(FIND_STRUCTURES, {
+    let structs = creep.pos.findClosestByPath(FIND_STRUCTURES, {
         filter: (structure) => {
             switch (structure.structureType) {
                 case STRUCTURE_WALL:
                 case STRUCTURE_RAMPART:
                     return false;
                 default:
-                    return structure.hits < structure.hitsMax;
+                    return structure.hits / structure.hitsMax < .75;
             }
         }
     });
+    if (structs) {
+        return structs;
+    }
+    else {
+        return creep.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: (structure) => {
+                switch (structure.structureType) {
+                    case STRUCTURE_WALL:
+                    case STRUCTURE_RAMPART:
+                        return false;
+                    default:
+                        return structure.hits < structure.hitsMax;
+                }
+            }
+        });
+    }
 }
 const MunicipalRepairAction = {
     name: "MunicipalRepair",
@@ -191,9 +207,9 @@ const Harvester = {
     },
     actions: [
         FillEnergyAction,
+        RepairAction,
         MunicipalRepairAction,
         BuildAction,
-        RepairAction,
         UpgradeControllerAction,
     ],
 };
