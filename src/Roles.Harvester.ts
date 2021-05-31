@@ -1,5 +1,4 @@
 import {CreepRole} from "./CreepRole";
-import {Action} from "./Action";
 import {UpgradeControllerAction} from "./Action.UpgradeController";
 import {FillEnergyAction} from "./Action.FillEnergy";
 import {BuildAction} from "./Action.Build";
@@ -15,9 +14,9 @@ export const Harvester: CreepRole = {
    },
    actions: [
       FillEnergyAction,
+      BuildAction,
       RepairAction,
       MunicipalRepairAction,
-      BuildAction,
       UpgradeControllerAction,
    ],
 };

@@ -207,9 +207,9 @@ const Harvester = {
     },
     actions: [
         FillEnergyAction,
+        BuildAction,
         RepairAction,
         MunicipalRepairAction,
-        BuildAction,
         UpgradeControllerAction,
     ],
 };
