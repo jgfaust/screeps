@@ -151,45 +151,34 @@ const RepairAction = {
     }
 };
 
-const Harvester = {
-    type: "Harvester",
-    bodyRatios: {
-        [WORK]: 40,
-        [CARRY]: 40,
-        [MOVE]: 20
-    },
-    actions: [
-        FillEnergyAction,
-        RepairAction,
-        BuildAction,
-        UpgradeControllerAction,
-    ],
-};
-
-const Upgrader = {
-    type: "Upgrader",
-    bodyRatios: {
-        [WORK]: 45,
-        [CARRY]: 35,
-        [MOVE]: 20,
-    },
-    actions: [
-        UpgradeControllerAction
-    ],
-};
-
 function closestByDamage(creep) {
-    return creep.pos.findClosestByRange(FIND_STRUCTURES, {
+    let structs = creep.pos.findClosestByPath(FIND_STRUCTURES, {
         filter: (structure) => {
             switch (structure.structureType) {
                 case STRUCTURE_WALL:
                 case STRUCTURE_RAMPART:
                     return false;
                 default:
-                    return structure.hits < structure.hitsMax;
+                    return structure.hits / structure.hitsMax < .75;
             }
         }
     });
+    if (structs) {
+        return structs;
+    }
+    else {
+        return creep.pos.findClosestByPath(FIND_STRUCTURES, {
+            filter: (structure) => {
+                switch (structure.structureType) {
+                    case STRUCTURE_WALL:
+                    case STRUCTURE_RAMPART:
+                        return false;
+                    default:
+                        return structure.hits < structure.hitsMax;
+                }
+            }
+        });
+    }
 }
 const MunicipalRepairAction = {
     name: "MunicipalRepair",
@@ -207,6 +196,34 @@ const MunicipalRepairAction = {
         // console.log("BuildAction: No sites found");
         return false;
     }
+};
+
+const Harvester = {
+    type: "Harvester",
+    bodyRatios: {
+        [WORK]: 40,
+        [CARRY]: 40,
+        [MOVE]: 20
+    },
+    actions: [
+        FillEnergyAction,
+        RepairAction,
+        MunicipalRepairAction,
+        BuildAction,
+        UpgradeControllerAction,
+    ],
+};
+
+const Upgrader = {
+    type: "Upgrader",
+    bodyRatios: {
+        [WORK]: 45,
+        [CARRY]: 35,
+        [MOVE]: 20,
+    },
+    actions: [
+        UpgradeControllerAction
+    ],
 };
 
 const Builder = {
