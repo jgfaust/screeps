@@ -6,3 +6,7 @@ interface CreepMemory {
 interface SpawnOptions {
    [K: string]: any;
 }
+
+interface Memory {
+   _Mastermind: any;
+}

@@ -1,5 +1,5 @@
-import {CreepRole} from "./CreepRole";
-import {ReserveRoomAction} from "./Action.ReserveRoom";
+import {CreepRole} from "../CreepRole";
+import {ReserveRoomAction} from "../action/Action.ReserveRoom";
 
 export const Explorer: CreepRole = {
    type: "Upgrader",

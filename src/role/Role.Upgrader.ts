@@ -1,5 +1,5 @@
-import {CreepRole} from "./CreepRole";
-import {UpgradeControllerAction} from "./Action.UpgradeController";
+import {CreepRole} from "../CreepRole";
+import {UpgradeControllerAction} from "../action/Action.UpgradeController";
 
 export const Upgrader: CreepRole = {
    type: "Upgrader",

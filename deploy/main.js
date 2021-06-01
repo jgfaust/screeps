@@ -151,6 +151,33 @@ const RepairAction = {
     }
 };
 
+const Harvester = {
+    type: "Harvester",
+    bodyRatios: {
+        [WORK]: 40,
+        [CARRY]: 40,
+        [MOVE]: 20
+    },
+    actions: [
+        FillEnergyAction,
+        RepairAction,
+        BuildAction,
+        UpgradeControllerAction,
+    ],
+};
+
+const Upgrader = {
+    type: "Upgrader",
+    bodyRatios: {
+        [WORK]: 45,
+        [CARRY]: 35,
+        [MOVE]: 20,
+    },
+    actions: [
+        UpgradeControllerAction
+    ],
+};
+
 function closestByDamage(creep) {
     let structs = creep.pos.findClosestByPath(FIND_STRUCTURES, {
         filter: (structure) => {
@@ -198,34 +225,6 @@ const MunicipalRepairAction = {
     }
 };
 
-const Harvester = {
-    type: "Harvester",
-    bodyRatios: {
-        [WORK]: 40,
-        [CARRY]: 40,
-        [MOVE]: 20
-    },
-    actions: [
-        FillEnergyAction,
-        RepairAction,
-        MunicipalRepairAction,
-        BuildAction,
-        UpgradeControllerAction,
-    ],
-};
-
-const Upgrader = {
-    type: "Upgrader",
-    bodyRatios: {
-        [WORK]: 45,
-        [CARRY]: 35,
-        [MOVE]: 20,
-    },
-    actions: [
-        UpgradeControllerAction
-    ],
-};
-
 const Builder = {
     type: "Builder",
     bodyRatios: {
@@ -258,28 +257,11 @@ const Repair = {
     ],
 };
 
-const Roles = {
+const Role = {
     Harvester,
     Upgrader,
     Builder,
     Repair,
-};
-
-const Tower = {
-    run(tower) {
-        const nearbyDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (s) => s.hits < s.hitsMax
-        });
-        if (nearbyDamagedStructure) ;
-        else {
-            const nearbyDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-                filter: (s) => s.hits < s.hitsMax
-            });
-            if (nearbyDamagedCreep) {
-                tower.heal(nearbyDamagedCreep);
-            }
-        }
-    }
 };
 
 const NAME_ID = (() => {
@@ -472,6 +454,23 @@ const Director = {
     }
 };
 
+const Tower = {
+    run(tower) {
+        const nearbyDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (s) => s.hits < s.hitsMax
+        });
+        if (nearbyDamagedStructure) ;
+        else {
+            const nearbyDamagedCreep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
+                filter: (s) => s.hits < s.hitsMax
+            });
+            if (nearbyDamagedCreep) {
+                tower.heal(nearbyDamagedCreep);
+            }
+        }
+    }
+};
+
 const _ = require('lodash');
 const MAX_CREEPS = {
     [Harvester.type]: 2,
@@ -479,57 +478,92 @@ const MAX_CREEPS = {
     [Builder.type]: 3,
     [Upgrader.type]: 4,
 };
-module.exports.loop = function () {
-    const creeps = Game.creeps;
+function getFacts() {
+    const facts = {
+        nucleus: "W8N3",
+        visibleRooms: Object.keys(Game.rooms)
+    };
+    return facts;
+}
+const textStyle = {
+    color: "#ffffff",
+    backgroundColor: "#000000",
+    opacity: 0.6
+};
+function drawRoomInfo(facts, room) {
+    const vis = new RoomVisual(room);
+    vis.text(`ROOM: ${room}`, 5, 5, textStyle);
+    if (facts.nucleus === room) {
+        vis.text('NUCLEUS', 5, 6, textStyle);
+    }
+}
+function init() {
+    if (!Memory._Mastermind) {
+        const facts = getFacts();
+        drawRoomInfo(facts, facts.nucleus);
+    }
+}
+const Mastermind = {
+    run() {
+        init();
+        const creeps = Game.creeps;
+        const roles = Object.values(Role);
+        Object.keys(creeps).forEach((c) => {
+            const creep = creeps[c];
+            const role = roles.find((r) => r.type === creep.memory.type);
+            if (role && creep) {
+                Director.run(role, creep);
+            }
+            else {
+                console.log("Couldn't find a role for creep", creep, role);
+            }
+        });
+        Object.keys(Game.rooms).forEach((k) => {
+            const room = Game.rooms[k];
+            const maxCreepKeys = Object.keys(MAX_CREEPS);
+            const harvesters = _.filter(creeps, (c) => c.memory.type == Harvester.type);
+            if (!harvesters.length) {
+                Director.create(Harvester, room, true);
+            }
+            else {
+                for (let i in maxCreepKeys) {
+                    let k = maxCreepKeys[i];
+                    const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
+                    if (kcreeps.length < MAX_CREEPS[k]) {
+                        Director.create(Role[k], room);
+                        break;
+                    }
+                }
+            }
+            const towers = room.find(FIND_MY_STRUCTURES, {
+                filter: { structureType: STRUCTURE_TOWER }
+            });
+            if (towers.length) {
+                towers.forEach((tower) => {
+                    const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+                    if (hostile) {
+                        if (tower.attack(hostile) === ERR_NOT_IN_RANGE) {
+                            Tower.run(tower);
+                        }
+                    }
+                    else {
+                        towers.forEach(Tower.run);
+                    }
+                });
+            }
+        });
+        garbageCollection();
+    }
+};
+function garbageCollection() {
     Object.keys(Memory.creeps).forEach((k) => {
         if (!Game.creeps[k]) {
             delete Memory.creeps[k];
         }
     });
-    const roles = Object.values(Roles);
-    Object.keys(creeps).forEach((c) => {
-        const creep = creeps[c];
-        const role = roles.find((r) => r.type === creep.memory.type);
-        if (role && creep) {
-            Director.run(role, creep);
-        }
-        else {
-            console.log("Couldn't find a role for creep", creep, role);
-        }
-    });
-    Object.keys(Game.rooms).forEach((k) => {
-        const room = Game.rooms[k];
-        const maxCreepKeys = Object.keys(MAX_CREEPS);
-        const harvesters = _.filter(creeps, (c) => c.memory.type == Harvester.type);
-        if (!harvesters.length) {
-            Director.create(Harvester, room, true);
-        }
-        else {
-            for (let i in maxCreepKeys) {
-                let k = maxCreepKeys[i];
-                const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
-                if (kcreeps.length < MAX_CREEPS[k]) {
-                    Director.create(Roles[k], room);
-                    break;
-                }
-            }
-        }
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
-        if (towers.length) {
-            towers.forEach((tower) => {
-                const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-                if (hostile) {
-                    if (tower.attack(hostile) === ERR_NOT_IN_RANGE) {
-                        Tower.run(tower);
-                    }
-                }
-                else {
-                    towers.forEach(Tower.run);
-                }
-            });
-        }
-    });
+}
+
+module.exports.loop = function () {
+    Mastermind.run();
 };
 //# sourceMappingURL=main.js.map

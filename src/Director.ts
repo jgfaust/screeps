@@ -1,8 +1,8 @@
 import {CreepRole} from "./CreepRole";
 import {NAME_ID} from "./Utils";
 import {CreepState} from "./CreepState";
-import {ScavengeAction} from "./Action.Scavenge";
-import {HarvestAction} from "./Action.Harvest";
+import {ScavengeAction} from "./action/Action.Scavenge";
+import {HarvestAction} from "./action/Action.Harvest";
 
 const _ = require("lodash");
 

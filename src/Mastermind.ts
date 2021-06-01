@@ -1,10 +1,11 @@
-import {Roles} from "./Roles";
+import {Role} from "./role/Role";
 import {Director} from "./Director";
-import {Harvester} from "./Roles.Harvester";
+import {Harvester} from "./role/Role.Harvester";
 import {Tower} from "./Tower";
-import {Repair} from "./Roles.Repair";
-import {Builder} from "./Roles.Builder";
-import {Upgrader} from "./Roles.Upgrader";
+import {Repair} from "./role/Role.Repair";
+import {Builder} from "./role/Role.Builder";
+import {Upgrader} from "./role/Role.Upgrader";
+
 const _ = require('lodash');
 
 const desiredColonies = [
@@ -21,7 +22,7 @@ const priorities = [
    'DevelopColonies',
    'BuildInfrastructure',
    'Explore'
-]
+];
 
 const MAX_CREEPS = {
    [Harvester.type]: 2,
@@ -34,20 +35,52 @@ interface Planner {
 
 }
 
-function init() {
-   if(Memory._Mastermind) {
+interface Facts {
+   nucleus: string;
+   visibleRooms: string[];
+}
 
+
+function getFacts(): Facts {
+   const facts: Facts = {
+      nucleus: "W8N3",
+      visibleRooms: Object.keys(Game.rooms)
+   };
+
+   return facts;
+}
+
+
+const textStyle = {
+   color: "#ffffff",
+   backgroundColor: "#000000",
+   opacity: 0.6
+};
+
+function drawRoomInfo(facts: Facts, room: string) {
+   const vis = new RoomVisual(room);
+   vis.text(`ROOM: ${room}`, 5, 5, textStyle);
+   if(facts.nucleus === room) {
+      vis.text('NUCLEUS', 5, 6, textStyle);
    }
 }
 
+
+function init() {
+   if(!Memory._Mastermind) {
+      const facts = getFacts();
+      drawRoomInfo(facts, facts.nucleus);
+   }
+}
+
+
 export const Mastermind = {
    run() {
-
       init();
 
       const creeps = Game.creeps;
 
-      const roles = Object.values(Roles);
+      const roles = Object.values(Role);
       Object.keys(creeps).forEach((c) => {
          const creep = creeps[c];
          const role = roles.find((r) => r.type === creep.memory.type);
@@ -70,7 +103,7 @@ export const Mastermind = {
                let k = maxCreepKeys[i];
                const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
                if(kcreeps.length < MAX_CREEPS[k]) {
-                  Director.create(Roles[k], room);
+                  Director.create(Role[k], room);
                   break;
                }
             }
@@ -95,7 +128,7 @@ export const Mastermind = {
 
       garbageCollection();
    }
-}
+};
 
 function garbageCollection() {
    Object.keys(Memory.creeps).forEach((k) => {

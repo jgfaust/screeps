@@ -1,5 +1,5 @@
 import {Action} from "./Action";
-import {CreepState} from "./CreepState";
+import {CreepState} from "../CreepState";
 
 export const HarvestAction: Action = {
    name: "Harvest",
