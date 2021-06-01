@@ -1,5 +1,5 @@
 import {Role} from "./role/Role";
-import {Director} from "./Director";
+import {ColonyDirector} from "./ColonyDirector";
 import {Harvester} from "./role/Role.Harvester";
 import {Tower} from "./Tower";
 import {Repair} from "./role/Role.Repair";
@@ -24,106 +24,92 @@ const priorities = [
    'Explore'
 ];
 
-const MAX_CREEPS = {
-   [Harvester.type]: 2,
-   [Repair.type]: 1,
-   [Builder.type]: 3,
-   [Upgrader.type]: 4,
-};
 
 interface Planner {
 
 }
 
-interface Facts {
+enum Stance {
+   Defense,
+   Normal,
+}
+
+export interface Facts {
    nucleus: string;
    visibleRooms: string[];
+   roomStance: RoomStance;
 }
 
+interface RoomStance {
+   [K: string]: {
+      stance: Stance,
+      enemyCreeps?: string[];
+      enemyConstruction?: string[];
+      enemyStructure?: string[];
+   }
+}
 
 function getFacts(): Facts {
-   const facts: Facts = {
+   const facts: Partial<Facts> = {
       nucleus: "W8N3",
-      visibleRooms: Object.keys(Game.rooms)
+      visibleRooms: Object.keys(Game.rooms),
+      roomStance: {}
    };
 
-   return facts;
+   facts.visibleRooms!.forEach((roomName) => {
+      const enemies = Game.rooms[roomName].find(FIND_HOSTILE_CREEPS);
+      const enemyConstruction = Game.rooms[roomName].find(FIND_HOSTILE_CONSTRUCTION_SITES);
+      const enemyStructure = Game.rooms[roomName].find(FIND_HOSTILE_STRUCTURES);
+      facts.roomStance![roomName] = {stance: Stance.Normal};
+
+      if(enemies.length || enemyConstruction.length || enemyStructure.length) {
+         facts.roomStance![roomName] = {
+            stance: Stance.Defense,
+            enemyCreeps: enemies.map((e) => e.id),
+            enemyConstruction: enemyConstruction.map((e) => e.id),
+            enemyStructure: enemyStructure.map((e) => e.id)
+         };
+      }
+   });
+
+   return facts as Facts;
 }
 
-
-const textStyle = {
+const textStyle: TextStyle = {
+   align: "left",
    color: "#ffffff",
    backgroundColor: "#000000",
-   opacity: 0.6
+   opacity: 0.6,
 };
 
 function drawRoomInfo(facts: Facts, room: string) {
    const vis = new RoomVisual(room);
-   vis.text(`ROOM: ${room}`, 5, 5, textStyle);
+   const origin = {
+      x: 4,
+      y: 3
+   };
+   vis.text(`ROOM ${room}`, origin.x, origin.y, textStyle);
+   vis.line(origin.x, origin.y + 1, origin.x + 10, origin.y + 1);
    if(facts.nucleus === room) {
-      vis.text('NUCLEUS', 5, 6, textStyle);
+      vis.text('NUCLEUS COLONY', origin.x, origin.y + 2, textStyle);
    }
 }
 
-
 function init() {
+   const facts = getFacts();
+   global.facts = facts;
    if(!Memory._Mastermind) {
-      const facts = getFacts();
       drawRoomInfo(facts, facts.nucleus);
    }
 }
-
 
 export const Mastermind = {
    run() {
       init();
 
-      const creeps = Game.creeps;
-
-      const roles = Object.values(Role);
-      Object.keys(creeps).forEach((c) => {
-         const creep = creeps[c];
-         const role = roles.find((r) => r.type === creep.memory.type);
-         if(role && creep) {
-            Director.run(role, creep);
-         } else {
-            console.log("Couldn't find a role for creep", creep, role);
-         }
-      });
-
       Object.keys(Game.rooms).forEach((k) => {
          const room = Game.rooms[k];
-
-         const maxCreepKeys = Object.keys(MAX_CREEPS);
-         const harvesters = _.filter(creeps, (c: Creep) => c.memory.type == Harvester.type);
-         if(!harvesters.length) {
-            Director.create(Harvester, room, true);
-         } else {
-            for(let i in maxCreepKeys) {
-               let k = maxCreepKeys[i];
-               const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
-               if(kcreeps.length < MAX_CREEPS[k]) {
-                  Director.create(Role[k], room);
-                  break;
-               }
-            }
-         }
-
-         const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, {
-            filter: {structureType: STRUCTURE_TOWER}
-         }) as StructureTower[];
-         if(towers.length) {
-            towers.forEach((tower) => {
-               const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-               if(hostile) {
-                  if(tower.attack(hostile) === ERR_NOT_IN_RANGE) {
-                     Tower.run(tower);
-                  }
-               } else {
-                  towers.forEach(Tower.run);
-               }
-            });
-         }
+         ColonyDirector.run(room);
       });
 
       garbageCollection();

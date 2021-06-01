@@ -10,3 +10,9 @@ interface SpawnOptions {
 interface Memory {
    _Mastermind: any;
 }
+
+declare namespace NodeJS {
+   interface Global {
+      facts: import("./Mastermind").Facts
+   }
+}

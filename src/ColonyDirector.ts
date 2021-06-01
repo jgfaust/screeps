@@ -3,6 +3,12 @@ import {NAME_ID} from "./Utils";
 import {CreepState} from "./CreepState";
 import {ScavengeAction} from "./action/Action.Scavenge";
 import {HarvestAction} from "./action/Action.Harvest";
+import {Role} from "./role/Role";
+import {Harvester} from "./role/Role.Harvester";
+import {Tower} from "./Tower";
+import {Repair} from "./role/Role.Repair";
+import {Builder} from "./role/Role.Builder";
+import {Upgrader} from "./role/Role.Upgrader";
 
 const _ = require("lodash");
 
@@ -11,7 +17,60 @@ const HARVEST = [
    HarvestAction
 ];
 
-export const Director = {
+const MAX_CREEPS = {
+   [Harvester.type]: 2,
+   [Repair.type]: 1,
+   [Builder.type]: 3,
+   [Upgrader.type]: 4,
+};
+
+export const ColonyDirector = {
+   run(room: Room) {
+      const roles = Object.values(Role);
+      const creeps: Creep[] = Object.keys(Game.creeps)
+         .filter((name) => name.startsWith(room.name))
+         .map((creepName) => Game.creeps[creepName]);
+
+      creeps.forEach((creep) => {
+         const role = roles.find((r) => r.type === creep.memory.type);
+         if(role && creep) {
+            this.creepAction(role, creep);
+         } else {
+            console.log("Couldn't find a role for creep", creep, role);
+         }
+      });
+
+      const maxCreepKeys = Object.keys(MAX_CREEPS);
+      const harvesters = _.filter(creeps, (c: Creep) => c.memory.type == Harvester.type);
+      if(!harvesters.length) {
+         this.create(Harvester, room, true);
+      } else {
+         for(let i in maxCreepKeys) {
+            let k = maxCreepKeys[i];
+            const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
+            if(kcreeps.length < MAX_CREEPS[k]) {
+               this.create(Role[k], room);
+               break;
+            }
+         }
+      }
+
+      const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, {
+         filter: {structureType: STRUCTURE_TOWER}
+      }) as StructureTower[];
+      if(towers.length) {
+         towers.forEach((tower) => {
+            const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+            if(hostile) {
+               if(tower.attack(hostile) === ERR_NOT_IN_RANGE) {
+                  Tower.run(tower);
+               }
+            } else {
+               towers.forEach(Tower.run);
+            }
+         });
+      }
+   },
    create(role: CreepRole, room: Room, force?: boolean): ScreepsReturnCode {
       // todo add harvester failsafe when num harvesters == 0
       const spawn = room.find(FIND_MY_SPAWNS);
@@ -46,11 +105,12 @@ export const Director = {
                " gives these parts ", bodyParts);*/
             const spawnCode = spawn[0].spawnCreep(bodyParts,
                `${room.name}_${role.type}_${NAME_ID()}`, {
-               memory: {
-                  creepState: CreepState.Harvesting,
-                  type: role.type
-               }
-            });
+                  memory: {
+                     creepState: CreepState.Harvesting,
+                     type: role.type
+                  },
+                  directions: [BOTTOM]
+               });
 
             // console.log(role.type, ": spawnCode", spawnCode);
             return spawnCode;
@@ -60,7 +120,7 @@ export const Director = {
       }
       return ERR_NOT_FOUND;
    },
-   run(role: CreepRole, creep: Creep) {
+   creepAction(role: CreepRole, creep: Creep) {
       if(creep.memory.type !== role.type) {
          console.log(`Harvester tried running creep of type ${creep.memory.type}`);
          return;

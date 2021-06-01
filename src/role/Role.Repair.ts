@@ -8,9 +8,9 @@ import {MunicipalRepairAction} from "../action/Action.MunicipalRepair";
 export const Repair: CreepRole = {
    type: "Repair",
    bodyRatios: {
-      [WORK]: 50,
-      [CARRY]: 30,
-      [MOVE]: 20
+      [WORK]: 40,
+      [CARRY]: 20,
+      [MOVE]: 40
    },
    actions: [
       MunicipalRepairAction,
