@@ -1,10 +1,5 @@
-import {Role} from "./role/Role";
 import {ColonyDirector} from "./ColonyDirector";
-import {Harvester} from "./role/Role.Harvester";
-import {Tower} from "./Tower";
-import {Repair} from "./role/Role.Repair";
-import {Builder} from "./role/Role.Builder";
-import {Upgrader} from "./role/Role.Upgrader";
+import {countSourceSlots, findAccessibleAdjacentRooms} from "./Utils";
 
 const _ = require('lodash');
 
@@ -17,17 +12,6 @@ const desiredColonies = [
    'W6N2'
 ];
 
-const priorities = [
-   'Defend',
-   'DevelopColonies',
-   'BuildInfrastructure',
-   'Explore'
-];
-
-
-interface Planner {
-
-}
 
 enum Stance {
    Defense,
@@ -38,6 +22,16 @@ export interface Facts {
    nucleus: string;
    visibleRooms: string[];
    roomStance: RoomStance;
+   permFacts: PermFacts;
+}
+
+export interface PermFacts {
+   rooms: {
+      [K: string]: {
+         sourceSlots: number;
+         adjacentRooms: string[];
+      }
+   }
 }
 
 interface RoomStance {
@@ -56,10 +50,28 @@ function getFacts(): Facts {
       roomStance: {}
    };
 
+   if(!Memory._Mastermind) {
+      Memory._Mastermind = {};
+   }
+
+   if(!Memory._Mastermind.permFacts) {
+      Memory._Mastermind.permFacts = {
+         rooms: {}
+      };
+   }
+
    facts.visibleRooms!.forEach((roomName) => {
-      const enemies = Game.rooms[roomName].find(FIND_HOSTILE_CREEPS);
-      const enemyConstruction = Game.rooms[roomName].find(FIND_HOSTILE_CONSTRUCTION_SITES);
-      const enemyStructure = Game.rooms[roomName].find(FIND_HOSTILE_STRUCTURES);
+      const room = Game.rooms[roomName];
+      if(!Memory._Mastermind.permFacts.rooms[roomName]) {
+         Memory._Mastermind.permFacts.rooms[roomName] = {
+            sourceSlots: countSourceSlots(room),
+            adjacentRooms: findAccessibleAdjacentRooms(roomName)
+         };
+      }
+
+      const enemies = room.find(FIND_HOSTILE_CREEPS);
+      const enemyConstruction = room.find(FIND_HOSTILE_CONSTRUCTION_SITES);
+      const enemyStructure = room.find(FIND_HOSTILE_STRUCTURES);
       facts.roomStance![roomName] = {stance: Stance.Normal};
 
       if(enemies.length || enemyConstruction.length || enemyStructure.length) {
@@ -72,6 +84,7 @@ function getFacts(): Facts {
       }
    });
 
+   facts.permFacts = Memory._Mastermind.permFacts;
    return facts as Facts;
 }
 
@@ -83,34 +96,57 @@ const textStyle: TextStyle = {
 };
 
 function drawRoomInfo(facts: Facts, room: string) {
+   const {text, line} = txFn(room);
+   text(`ROOM ${room}`);
+   line();
+   if(facts.nucleus === room) {
+      text('NUCLEUS COLONY');
+   }
+   text('STANCE ' + Stance[facts.roomStance[room].stance].toString());
+   text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
+}
+
+const txFn = ((room: string) => {
    const vis = new RoomVisual(room);
    const origin = {
       x: 4,
       y: 3
    };
-   vis.text(`ROOM ${room}`, origin.x, origin.y, textStyle);
-   vis.line(origin.x, origin.y + 1, origin.x + 10, origin.y + 1);
-   if(facts.nucleus === room) {
-      vis.text('NUCLEUS COLONY', origin.x, origin.y + 2, textStyle);
-   }
-}
+   let rowOffset = 0;
+   return {
+      text: (text: string, onNewLine: boolean = true) => {
+         if(onNewLine) {
+            rowOffset++;
+         }
+         vis.text(text, origin.x, origin.y + rowOffset, textStyle);
+      },
+      line: (width: number = 10, onNewLine: boolean = true) => {
+         if(onNewLine) {
+            rowOffset++;
+         }
+         vis.line(origin.x, origin.y + rowOffset, origin.x + width, origin.y + rowOffset);
+      }
+   };
+});
 
 function init() {
    const facts = getFacts();
    global.facts = facts;
-   if(!Memory._Mastermind) {
-      drawRoomInfo(facts, facts.nucleus);
-   }
+
+   drawRoomInfo(facts, facts.nucleus);
 }
 
 export const Mastermind = {
    run() {
       init();
 
+
       Object.keys(Game.rooms).forEach((k) => {
          const room = Game.rooms[k];
          ColonyDirector.run(room);
       });
+
+
 
       garbageCollection();
    }

@@ -1,5 +1,6 @@
 import {CreepRole} from "../CreepRole";
 import {UpgradeControllerAction} from "../action/Action.UpgradeController";
+import {StoreResourcesAction} from "../action/Action.StoreResources";
 
 export const Upgrader: CreepRole = {
    type: "Upgrader",
@@ -9,6 +10,7 @@ export const Upgrader: CreepRole = {
       [MOVE]: 20,
    },
    actions: [
+      StoreResourcesAction,
       UpgradeControllerAction
    ],
 };

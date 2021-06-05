@@ -24,6 +24,25 @@ const MAX_CREEPS = {
    [Upgrader.type]: 4,
 };
 
+const priorities = [
+   'Defend',
+   'DevelopColonies',
+   'BuildInfrastructure',
+   'Explore'
+];
+
+
+const levelPriorities = {
+   1: {},
+   2: {},
+   3: {},
+   4: {},
+   5: {},
+   6: {},
+   7: {},
+   8: {},
+};
+
 export const ColonyDirector = {
    run(room: Room) {
       const roles = Object.values(Role);
@@ -48,6 +67,7 @@ export const ColonyDirector = {
          for(let i in maxCreepKeys) {
             let k = maxCreepKeys[i];
             const kcreeps = _.filter(creeps, (c: Creep) => c.memory.type == k);
+            // console.log(k, kcreeps);
             if(kcreeps.length < MAX_CREEPS[k]) {
                this.create(Role[k], room);
                break;
@@ -55,55 +75,51 @@ export const ColonyDirector = {
          }
       }
 
-      const towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, {
-         filter: {structureType: STRUCTURE_TOWER}
-      }) as StructureTower[];
-      if(towers.length) {
-         towers.forEach((tower) => {
-            const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-            if(hostile) {
-               if(tower.attack(hostile) === ERR_NOT_IN_RANGE) {
-                  Tower.run(tower);
-               }
-            } else {
-               towers.forEach(Tower.run);
-            }
-         });
-      }
+      Tower.run(room);
    },
    create(role: CreepRole, room: Room, force?: boolean): ScreepsReturnCode {
-      // todo add harvester failsafe when num harvesters == 0
       const spawn = room.find(FIND_MY_SPAWNS);
       if(spawn.length) {
-         if(room.energyAvailable > 300) {
+         if(room.energyAvailable > 800) {
             force = true;
          }
-         const capacity = force ? room.energyAvailable : room.energyCapacityAvailable;
-         if(room.energyAvailable === capacity) {
+         const capacity = role.maxCost || (force ? room.energyAvailable : room.energyCapacityAvailable);
+         // console.log("create", role.type, capacity, room.energyAvailable);
+         if(room.energyAvailable >= capacity) {
             const bodyParts: BodyPartConstant[] = [];
-            let remaining = capacity;
-            // console.log("capacity", capacity);
-            let bodyRatioSum = 0;
-            Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
-            Object.keys(role.bodyRatios).forEach((k) => {
-               const part: BodyPartConstant = k as BodyPartConstant;
-               // console.log("part ", part);
-               // console.log("bodypart_cost ", BODYPART_COST[part]);
-               const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
-               // console.log("portion ", portion);
-               const chunkCount = Math.floor(portion / BODYPART_COST[part]);
-               // console.log("chunkCount ", chunkCount);
-               remaining -= (chunkCount * BODYPART_COST[part]);
-               _.times(chunkCount, () => bodyParts.push(part));
-               // console.log("bodyParts", JSON.stringify(bodyParts));
-            });
+            if("bodyRatios" in role) {
+               let remaining = capacity;
+               let bodyRatioSum = 0;
+               Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k as BodyPartConstant]!);
+               Object.keys(role.bodyRatios).forEach((k) => {
+                  const part: BodyPartConstant = k as BodyPartConstant;
+                  const portion = (role.bodyRatios[part]! / bodyRatioSum) * capacity;
+                  const chunkCount = Math.floor(portion / BODYPART_COST[part]);
+                  remaining -= (chunkCount * BODYPART_COST[part]);
+                  _.times(chunkCount, () => bodyParts.push(part));
+               });
 
-            // console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
-            _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
+               _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
+            } else {
+               let remaining = capacity;
+               let expandoPart: BodyPartConstant | undefined = undefined;
+               const keys = Object.keys(role.bodyParts);
+               for(const i in keys) {
+                  const part: BodyPartConstant = keys[i] as BodyPartConstant;
+                  if(role.bodyParts[part]! === '*') {
+                     expandoPart = part;
+                  } else {
+                     _.times(role.bodyParts[part]!, () => bodyParts.push(part));
+                  }
+               }
 
-            /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
-               " gives these parts ", bodyParts);*/
-            const spawnCode = spawn[0].spawnCreep(bodyParts,
+               // todo - balance if multiple expandos provided
+               if(expandoPart) {
+                  _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(expandoPart!));
+               }
+            }
+
+            const creation = spawn[0].spawnCreep(bodyParts,
                `${room.name}_${role.type}_${NAME_ID()}`, {
                   memory: {
                      creepState: CreepState.Harvesting,
@@ -111,9 +127,9 @@ export const ColonyDirector = {
                   },
                   directions: [BOTTOM]
                });
-
-            // console.log(role.type, ": spawnCode", spawnCode);
-            return spawnCode;
+            if(creation !== OK) {
+               console.log("couldn't create", creation, role.type, bodyParts);
+            }
          } else {
             return ERR_NOT_ENOUGH_ENERGY;
          }

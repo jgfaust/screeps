@@ -1,4 +1,6 @@
 import {Action} from "./Action";
+import {PICKUP_RESOURCE} from "../Utils";
+
 
 export const ScavengeAction: Action = {
    name: "Scavenge",
@@ -16,14 +18,18 @@ export const ScavengeAction: Action = {
          }
       } else {
          const tomb = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
-            filter: (r) => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+            filter: (r) => r.store.getUsedCapacity() > 0
          });
          if(tomb) {
             if(creep.withdraw(tomb, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                creep.moveTo(tomb);
                return true;
-            } else {
-               return true;
+            }
+            for(const i in PICKUP_RESOURCE) {
+               if(creep.withdraw(tomb, PICKUP_RESOURCE[i]) == ERR_NOT_IN_RANGE) {
+                  creep.moveTo(tomb);
+                  return true;
+               }
             }
          } else {
             const ruin = creep.pos.findClosestByPath(FIND_RUINS, {

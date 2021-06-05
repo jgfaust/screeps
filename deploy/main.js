@@ -4,6 +4,121 @@ const NAME_ID = (() => {
     let initial = Number.parseInt(`${Date.now()}`.substr(4, 4));
     return () => initial++;
 })();
+const getRoomCoordinates = ((roomName) => {
+    const xy = roomName.split(/[^\d]/).filter((s) => !!s);
+    const ab = roomName.split(/[\d]/).filter((s) => !!s);
+    return {
+        a: ab[0],
+        column: Number.parseInt(xy[0]),
+        b: ab[1],
+        row: Number.parseInt(xy[1])
+    };
+});
+const getRoomFromCoordinates = (a, column, b, row) => `${a}${column}${b}${row}`;
+const roomTop = (currentRoom, coordinates) => {
+    if (!coordinates) {
+        coordinates = getRoomCoordinates(currentRoom);
+    }
+    return getRoomFromCoordinates(coordinates.a, coordinates.column, coordinates.b, coordinates.row + 1);
+};
+const roomLeft = (currentRoom, coordinates) => {
+    if (!coordinates) {
+        coordinates = getRoomCoordinates(currentRoom);
+    }
+    return getRoomFromCoordinates(coordinates.a, coordinates.column + 1, coordinates.b, coordinates.row);
+};
+const roomRight = (currentRoom, coordinates) => {
+    if (!coordinates) {
+        coordinates = getRoomCoordinates(currentRoom);
+    }
+    return getRoomFromCoordinates(coordinates.a, coordinates.column - 1, coordinates.b, coordinates.row);
+};
+const roomBottom = (currentRoom, coordinates) => {
+    if (!coordinates) {
+        coordinates = getRoomCoordinates(currentRoom);
+    }
+    return getRoomFromCoordinates(coordinates.a, coordinates.column, coordinates.b, coordinates.row - 1);
+};
+const findAccessibleAdjacentRooms = ((roomName) => {
+    const currentRoom = Game.rooms[roomName];
+    const accessibleRooms = [];
+    if (currentRoom) {
+        const coordinates = getRoomCoordinates(roomName);
+        const top = roomTop(roomName, coordinates);
+        const bottom = roomBottom(roomName, coordinates);
+        const left = roomLeft(roomName, coordinates);
+        const right = roomRight(roomName, coordinates);
+        if (currentRoom.findExitTo(top) === FIND_EXIT_TOP) {
+            accessibleRooms.push(top);
+        }
+        if (currentRoom.findExitTo(bottom) === FIND_EXIT_BOTTOM) {
+            accessibleRooms.push(bottom);
+        }
+        if (currentRoom.findExitTo(left) === FIND_EXIT_LEFT) {
+            accessibleRooms.push(left);
+        }
+        if (currentRoom.findExitTo(right) === FIND_EXIT_RIGHT) {
+            accessibleRooms.push(right);
+        }
+    }
+    return accessibleRooms;
+});
+const countSourceSlots = ((room) => {
+    const sources = room.find(FIND_SOURCES);
+    let slots = 0;
+    sources.forEach((source) => {
+        const leftx = clamp(source.pos.x - 1);
+        const lefty = clamp(source.pos.y - 1);
+        const rightx = clamp(source.pos.x + 1);
+        const righty = clamp(source.pos.y + 1);
+        const terrain = room.getTerrain();
+        for (let y = lefty; y <= righty; y++) {
+            for (let x = leftx; x <= rightx; x++) {
+                if (terrain.get(x, y) === 0) {
+                    slots++;
+                }
+            }
+        }
+    });
+    return slots;
+});
+const clamp = (x) => x < 0 ? 0 :
+    (x > 49 ? 49 : x);
+const PICKUP_RESOURCE = [
+    RESOURCE_HYDROXIDE,
+    RESOURCE_ZYNTHIUM_KEANITE,
+    RESOURCE_UTRIUM_LEMERGITE,
+    RESOURCE_UTRIUM_HYDRIDE,
+    RESOURCE_UTRIUM_OXIDE,
+    RESOURCE_KEANIUM_HYDRIDE,
+    RESOURCE_KEANIUM_OXIDE,
+    RESOURCE_LEMERGIUM_HYDRIDE,
+    RESOURCE_LEMERGIUM_OXIDE,
+    RESOURCE_ZYNTHIUM_HYDRIDE,
+    RESOURCE_ZYNTHIUM_OXIDE,
+    RESOURCE_GHODIUM_HYDRIDE,
+    RESOURCE_GHODIUM_OXIDE,
+    RESOURCE_UTRIUM_ACID,
+    RESOURCE_UTRIUM_ALKALIDE,
+    RESOURCE_KEANIUM_ACID,
+    RESOURCE_KEANIUM_ALKALIDE,
+    RESOURCE_LEMERGIUM_ACID,
+    RESOURCE_LEMERGIUM_ALKALIDE,
+    RESOURCE_ZYNTHIUM_ACID,
+    RESOURCE_ZYNTHIUM_ALKALIDE,
+    RESOURCE_GHODIUM_ACID,
+    RESOURCE_GHODIUM_ALKALIDE,
+    RESOURCE_CATALYZED_UTRIUM_ACID,
+    RESOURCE_CATALYZED_UTRIUM_ALKALIDE,
+    RESOURCE_CATALYZED_KEANIUM_ACID,
+    RESOURCE_CATALYZED_KEANIUM_ALKALIDE,
+    RESOURCE_CATALYZED_LEMERGIUM_ACID,
+    RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE,
+    RESOURCE_CATALYZED_ZYNTHIUM_ACID,
+    RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE,
+    RESOURCE_CATALYZED_GHODIUM_ACID,
+    RESOURCE_CATALYZED_GHODIUM_ALKALIDE,
+];
 
 var CreepState;
 (function (CreepState) {
@@ -29,15 +144,18 @@ const ScavengeAction = {
         }
         else {
             const tomb = creep.pos.findClosestByPath(FIND_TOMBSTONES, {
-                filter: (r) => r.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+                filter: (r) => r.store.getUsedCapacity() > 0
             });
             if (tomb) {
                 if (creep.withdraw(tomb, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(tomb);
                     return true;
                 }
-                else {
-                    return true;
+                for (const i in PICKUP_RESOURCE) {
+                    if (creep.withdraw(tomb, PICKUP_RESOURCE[i]) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(tomb);
+                        return true;
+                    }
                 }
             }
             else {
@@ -292,6 +410,36 @@ const MunicipalRepairAction = {
     }
 };
 
+const StoreResourcesAction = {
+    name: "StoreResoures",
+    do(creep) {
+        // console.log("storing?", creep.store.getUsedCapacity(), creep.store.getUsedCapacity(RESOURCE_ENERGY));
+        if (creep.store.getUsedCapacity() > 0 &&
+            creep.store.getUsedCapacity(RESOURCE_ENERGY) < creep.store.getUsedCapacity()) {
+            console.log("attempt store");
+            const struct = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
+                filter: (s) => {
+                    if ("store" in s) {
+                        return s.structureType === STRUCTURE_STORAGE;
+                    }
+                    return false;
+                }
+            });
+            console.log("struct", struct);
+            if (struct) {
+                for (const i in PICKUP_RESOURCE) {
+                    if (creep.transfer(struct, PICKUP_RESOURCE[i]) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(struct);
+                        return true;
+                    }
+                }
+            }
+        }
+        // console.log("storing: false");
+        return false;
+    }
+};
+
 const Harvester = {
     type: "Harvester",
     bodyRatios: {
@@ -300,6 +448,7 @@ const Harvester = {
         [MOVE]: 20
     },
     actions: [
+        StoreResourcesAction,
         FillEnergyAction,
         BuildAction,
         RepairAction,
@@ -316,6 +465,7 @@ const Upgrader = {
         [MOVE]: 20,
     },
     actions: [
+        StoreResourcesAction,
         UpgradeControllerAction
     ],
 };
@@ -328,6 +478,7 @@ const Builder = {
         [MOVE]: 20
     },
     actions: [
+        StoreResourcesAction,
         BuildAction,
         RepairAction,
         MunicipalRepairAction,
@@ -343,7 +494,9 @@ const Repair = {
         [CARRY]: 20,
         [MOVE]: 40
     },
+    maxCost: 800,
     actions: [
+        StoreResourcesAction,
         MunicipalRepairAction,
         RepairAction,
         BuildAction,
@@ -360,7 +513,25 @@ const Role = {
 };
 
 const Tower = {
-    run(tower) {
+    run(room) {
+        const towers = room.find(FIND_MY_STRUCTURES, {
+            filter: { structureType: STRUCTURE_TOWER }
+        });
+        if (towers.length) {
+            towers.forEach((tower) => {
+                const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+                if (hostile) {
+                    if (tower.attack(hostile) === ERR_NOT_IN_RANGE) {
+                        this.towerAction(tower);
+                    }
+                }
+                else {
+                    towers.forEach(Tower.towerAction);
+                }
+            });
+        }
+    },
+    towerAction(tower) {
         tower.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (s) => s.hits < s.hitsMax
         });
@@ -410,68 +581,66 @@ const ColonyDirector = {
             for (let i in maxCreepKeys) {
                 let k = maxCreepKeys[i];
                 const kcreeps = _.filter(creeps, (c) => c.memory.type == k);
+                // console.log(k, kcreeps);
                 if (kcreeps.length < MAX_CREEPS[k]) {
                     this.create(Role[k], room);
                     break;
                 }
             }
         }
-        const towers = room.find(FIND_MY_STRUCTURES, {
-            filter: { structureType: STRUCTURE_TOWER }
-        });
-        if (towers.length) {
-            towers.forEach((tower) => {
-                const hostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-                if (hostile) {
-                    if (tower.attack(hostile) === ERR_NOT_IN_RANGE) {
-                        Tower.run(tower);
-                    }
-                }
-                else {
-                    towers.forEach(Tower.run);
-                }
-            });
-        }
+        Tower.run(room);
     },
     create(role, room, force) {
-        // todo add harvester failsafe when num harvesters == 0
         const spawn = room.find(FIND_MY_SPAWNS);
         if (spawn.length) {
-            if (room.energyAvailable > 300) {
+            if (room.energyAvailable > 800) {
                 force = true;
             }
-            const capacity = force ? room.energyAvailable : room.energyCapacityAvailable;
-            if (room.energyAvailable === capacity) {
+            const capacity = role.maxCost || (force ? room.energyAvailable : room.energyCapacityAvailable);
+            // console.log("create", role.type, capacity, room.energyAvailable);
+            if (room.energyAvailable >= capacity) {
                 const bodyParts = [];
-                let remaining = capacity;
-                // console.log("capacity", capacity);
-                let bodyRatioSum = 0;
-                Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
-                Object.keys(role.bodyRatios).forEach((k) => {
-                    const part = k;
-                    // console.log("part ", part);
-                    // console.log("bodypart_cost ", BODYPART_COST[part]);
-                    const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
-                    // console.log("portion ", portion);
-                    const chunkCount = Math.floor(portion / BODYPART_COST[part]);
-                    // console.log("chunkCount ", chunkCount);
-                    remaining -= (chunkCount * BODYPART_COST[part]);
-                    _.times(chunkCount, () => bodyParts.push(part));
-                    // console.log("bodyParts", JSON.stringify(bodyParts));
-                });
-                // console.log(role.type, ": remaining capacity", remaining, Math.floor(remaining / BODYPART_COST[MOVE]));
-                _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
-                /*console.log(role.type, ": Using ratios ", JSON.stringify(role.bodyRatios),
-                   " gives these parts ", bodyParts);*/
-                const spawnCode = spawn[0].spawnCreep(bodyParts, `${room.name}_${role.type}_${NAME_ID()}`, {
+                if ("bodyRatios" in role) {
+                    let remaining = capacity;
+                    let bodyRatioSum = 0;
+                    Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
+                    Object.keys(role.bodyRatios).forEach((k) => {
+                        const part = k;
+                        const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
+                        const chunkCount = Math.floor(portion / BODYPART_COST[part]);
+                        remaining -= (chunkCount * BODYPART_COST[part]);
+                        _.times(chunkCount, () => bodyParts.push(part));
+                    });
+                    _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
+                }
+                else {
+                    let remaining = capacity;
+                    let expandoPart = undefined;
+                    const keys = Object.keys(role.bodyParts);
+                    for (const i in keys) {
+                        const part = keys[i];
+                        if (role.bodyParts[part] === '*') {
+                            expandoPart = part;
+                        }
+                        else {
+                            _.times(role.bodyParts[part], () => bodyParts.push(part));
+                        }
+                    }
+                    // todo - balance if multiple expandos provided
+                    if (expandoPart) {
+                        _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(expandoPart));
+                    }
+                }
+                const creation = spawn[0].spawnCreep(bodyParts, `${room.name}_${role.type}_${NAME_ID()}`, {
                     memory: {
                         creepState: CreepState.Harvesting,
                         type: role.type
                     },
                     directions: [BOTTOM]
                 });
-                // console.log(role.type, ": spawnCode", spawnCode);
-                return spawnCode;
+                if (creation !== OK) {
+                    console.log("couldn't create", creation, role.type, bodyParts);
+                }
             }
             else {
                 return ERR_NOT_ENOUGH_ENERGY;
@@ -525,11 +694,47 @@ const ColonyDirector = {
 };
 
 require('lodash');
+var Stance;
+(function (Stance) {
+    Stance[Stance["Defense"] = 0] = "Defense";
+    Stance[Stance["Normal"] = 1] = "Normal";
+})(Stance || (Stance = {}));
 function getFacts() {
     const facts = {
         nucleus: "W8N3",
-        visibleRooms: Object.keys(Game.rooms)
+        visibleRooms: Object.keys(Game.rooms),
+        roomStance: {}
     };
+    if (!Memory._Mastermind) {
+        Memory._Mastermind = {};
+    }
+    if (!Memory._Mastermind.permFacts) {
+        Memory._Mastermind.permFacts = {
+            rooms: {}
+        };
+    }
+    facts.visibleRooms.forEach((roomName) => {
+        const room = Game.rooms[roomName];
+        if (!Memory._Mastermind.permFacts.rooms[roomName]) {
+            Memory._Mastermind.permFacts.rooms[roomName] = {
+                sourceSlots: countSourceSlots(room),
+                adjacentRooms: findAccessibleAdjacentRooms(roomName)
+            };
+        }
+        const enemies = room.find(FIND_HOSTILE_CREEPS);
+        const enemyConstruction = room.find(FIND_HOSTILE_CONSTRUCTION_SITES);
+        const enemyStructure = room.find(FIND_HOSTILE_STRUCTURES);
+        facts.roomStance[roomName] = { stance: Stance.Normal };
+        if (enemies.length || enemyConstruction.length || enemyStructure.length) {
+            facts.roomStance[roomName] = {
+                stance: Stance.Defense,
+                enemyCreeps: enemies.map((e) => e.id),
+                enemyConstruction: enemyConstruction.map((e) => e.id),
+                enemyStructure: enemyStructure.map((e) => e.id)
+            };
+        }
+    });
+    facts.permFacts = Memory._Mastermind.permFacts;
     return facts;
 }
 const textStyle = {
@@ -539,27 +744,45 @@ const textStyle = {
     opacity: 0.6,
 };
 function drawRoomInfo(facts, room) {
+    const { text, line } = txFn(room);
+    text(`ROOM ${room}`);
+    line();
+    if (facts.nucleus === room) {
+        text('NUCLEUS COLONY');
+    }
+    text('STANCE ' + Stance[facts.roomStance[room].stance].toString());
+    text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
+}
+const txFn = ((room) => {
     const vis = new RoomVisual(room);
     const origin = {
         x: 4,
         y: 3
     };
-    vis.text(`ROOM ${room}`, origin.x, origin.y, textStyle);
-    vis.line(origin.x, origin.y + 1, origin.x + 10, origin.y + 1);
-    if (facts.nucleus === room) {
-        vis.text('NUCLEUS COLONY', origin.x, origin.y + 2, textStyle);
-    }
-}
+    let rowOffset = 0;
+    return {
+        text: (text, onNewLine = true) => {
+            if (onNewLine) {
+                rowOffset++;
+            }
+            vis.text(text, origin.x, origin.y + rowOffset, textStyle);
+        },
+        line: (width = 10, onNewLine = true) => {
+            if (onNewLine) {
+                rowOffset++;
+            }
+            vis.line(origin.x, origin.y + rowOffset, origin.x + width, origin.y + rowOffset);
+        }
+    };
+});
 function init() {
-    if (!Memory._Mastermind) {
-        const facts = getFacts();
-        drawRoomInfo(facts, facts.nucleus);
-    }
+    const facts = getFacts();
+    global.facts = facts;
+    drawRoomInfo(facts, facts.nucleus);
 }
 const Mastermind = {
     run() {
         init();
-        Game.creeps;
         Object.keys(Game.rooms).forEach((k) => {
             const room = Game.rooms[k];
             ColonyDirector.run(room);

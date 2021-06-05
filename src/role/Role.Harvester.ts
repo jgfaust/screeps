@@ -4,6 +4,7 @@ import {FillEnergyAction} from "../action/Action.FillEnergy";
 import {BuildAction} from "../action/Action.Build";
 import {RepairAction} from "../action/Action.Repair";
 import {MunicipalRepairAction} from "../action/Action.MunicipalRepair";
+import {StoreResourcesAction} from "../action/Action.StoreResources";
 
 export const Harvester: CreepRole = {
    type: "Harvester",
@@ -13,6 +14,7 @@ export const Harvester: CreepRole = {
       [MOVE]: 20
    },
    actions: [
+      StoreResourcesAction,
       FillEnergyAction,
       BuildAction,
       RepairAction,
