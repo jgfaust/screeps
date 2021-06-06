@@ -740,14 +740,14 @@ const textStyle = {
     opacity: 0.6,
 };
 function drawRoomInfo(facts, room) {
-    var _a;
+    var _a, _b;
     const { text, line } = txFn(room);
     text(`ROOM ${room}`);
     line();
     if (facts.nucleus === room) {
         text('NUCLEUS COLONY');
     }
-    text('STANCE ' + Stance[(_a = facts.roomStance[room]) === null || _a === void 0 ? void 0 : _a.stance].toString());
+    text('STANCE ' + ((_b = Stance[(_a = facts.roomStance[room]) === null || _a === void 0 ? void 0 : _a.stance]) === null || _b === void 0 ? void 0 : _b.toString()));
     text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
 }
 const txFn = ((room) => {
