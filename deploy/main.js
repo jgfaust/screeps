@@ -413,10 +413,8 @@ const MunicipalRepairAction = {
 const StoreResourcesAction = {
     name: "StoreResoures",
     do(creep) {
-        // console.log("storing?", creep.store.getUsedCapacity(), creep.store.getUsedCapacity(RESOURCE_ENERGY));
         if (creep.store.getUsedCapacity() > 0 &&
             creep.store.getUsedCapacity(RESOURCE_ENERGY) < creep.store.getUsedCapacity()) {
-            console.log("attempt store");
             const struct = creep.pos.findClosestByPath(FIND_MY_STRUCTURES, {
                 filter: (s) => {
                     if ("store" in s) {
@@ -425,7 +423,6 @@ const StoreResourcesAction = {
                     return false;
                 }
             });
-            console.log("struct", struct);
             if (struct) {
                 for (const i in PICKUP_RESOURCE) {
                     if (creep.transfer(struct, PICKUP_RESOURCE[i]) == ERR_NOT_IN_RANGE) {
@@ -435,7 +432,6 @@ const StoreResourcesAction = {
                 }
             }
         }
-        // console.log("storing: false");
         return false;
     }
 };
@@ -744,13 +740,14 @@ const textStyle = {
     opacity: 0.6,
 };
 function drawRoomInfo(facts, room) {
+    var _a;
     const { text, line } = txFn(room);
     text(`ROOM ${room}`);
     line();
     if (facts.nucleus === room) {
         text('NUCLEUS COLONY');
     }
-    text('STANCE ' + Stance[facts.roomStance[room].stance].toString());
+    text('STANCE ' + Stance[(_a = facts.roomStance[room]) === null || _a === void 0 ? void 0 : _a.stance].toString());
     text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
 }
 const txFn = ((room) => {
