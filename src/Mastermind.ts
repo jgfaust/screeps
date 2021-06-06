@@ -102,7 +102,7 @@ function drawRoomInfo(facts: Facts, room: string) {
    if(facts.nucleus === room) {
       text('NUCLEUS COLONY');
    }
-   text('STANCE ' + Stance[facts.roomStance[room].stance].toString());
+   text('STANCE ' + Stance[facts.roomStance[room]?.stance].toString());
    text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
 }
 
@@ -140,13 +140,10 @@ export const Mastermind = {
    run() {
       init();
 
-
       Object.keys(Game.rooms).forEach((k) => {
          const room = Game.rooms[k];
          ColonyDirector.run(room);
       });
-
-
 
       garbageCollection();
    }
