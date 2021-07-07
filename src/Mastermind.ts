@@ -102,8 +102,8 @@ function drawRoomInfo(facts: Facts, room: string) {
    if(facts.nucleus === room) {
       text('NUCLEUS COLONY');
    }
-   text('STANCE ' + Stance[facts.roomStance[room]?.stance].toString());
-   text('SOURCE SLOTS ' + facts.permFacts.rooms[room].sourceSlots);
+   text('STANCE ' + Stance[facts.roomStance[room]?.stance]?.toString());
+   text('SOURCE SLOTS ' + facts.permFacts?.rooms[room]?.sourceSlots);
 }
 
 const txFn = ((room: string) => {

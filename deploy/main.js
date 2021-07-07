@@ -553,6 +553,29 @@ const MAX_CREEPS = {
     [Builder.type]: 3,
     [Upgrader.type]: 4,
 };
+function getNumberOfBodyPartsByRatio(energyCapacity, bodyRatios) {
+    let remainingEnergy = energyCapacity;
+    let bodyRatioSum = 0;
+    let chunkSum = 0;
+    const partCount = {};
+    const normalizedRatios = {};
+    Object.keys(bodyRatios).forEach((k) => bodyRatioSum += bodyRatios[k]);
+    Object.keys(bodyRatios).forEach((k) => {
+        const part = k;
+        const portion = (bodyRatios[part] / bodyRatioSum) * energyCapacity;
+        normalizedRatios[part] = Math.floor((bodyRatios[part] / bodyRatioSum) * MAX_CREEP_SIZE);
+        const chunkCount = Math.floor(portion / BODYPART_COST[part]);
+        partCount[part] = chunkCount;
+        remainingEnergy -= (chunkCount * BODYPART_COST[part]);
+        chunkSum += chunkCount;
+    });
+    if (chunkSum > MAX_CREEP_SIZE) {
+        return normalizedRatios;
+    }
+    else {
+        return partCount;
+    }
+}
 const ColonyDirector = {
     run(room) {
         const roles = Object.values(Role);
@@ -597,17 +620,21 @@ const ColonyDirector = {
             if (room.energyAvailable >= capacity) {
                 const bodyParts = [];
                 if ("bodyRatios" in role) {
-                    let remaining = capacity;
+                    /*let remaining = capacity;
                     let bodyRatioSum = 0;
-                    Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k]);
+                    Object.keys(role.bodyRatios).forEach((k) => bodyRatioSum += role.bodyRatios[k as BodyPartConstant]!);
                     Object.keys(role.bodyRatios).forEach((k) => {
-                        const part = k;
-                        const portion = (role.bodyRatios[part] / bodyRatioSum) * capacity;
-                        const chunkCount = Math.floor(portion / BODYPART_COST[part]);
-                        remaining -= (chunkCount * BODYPART_COST[part]);
-                        _.times(chunkCount, () => bodyParts.push(part));
+                       const part: BodyPartConstant = k as BodyPartConstant;
+                       const portion = (role.bodyRatios[part]! / bodyRatioSum) * capacity;
+                       const chunkCount = Math.floor(portion / BODYPART_COST[part]);
+                       remaining -= (chunkCount * BODYPART_COST[part]);
+                       _.times(Math.min(MAX_CREEP_SIZE - bodyParts.length, chunkCount - bodyParts.length), () => bodyParts.push(part));
                     });
-                    _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(MOVE));
+     
+                    _.times(Math.min(MAX_CREEP_SIZE - bodyParts.length, Math.floor(remaining / BODYPART_COST[MOVE]) - bodyParts.length), () => bodyParts.push(MOVE));*/
+                    const numberOfParts = getNumberOfBodyPartsByRatio(capacity, role.bodyRatios);
+                    Object.keys(numberOfParts)
+                        .forEach((k) => _.times(numberOfParts[k], () => bodyParts.push(k)));
                 }
                 else {
                     let remaining = capacity;
@@ -619,15 +646,16 @@ const ColonyDirector = {
                             expandoPart = part;
                         }
                         else {
-                            _.times(role.bodyParts[part], () => bodyParts.push(part));
+                            _.times(Math.min(MAX_CREEP_SIZE - bodyParts.length, role.bodyParts[part] - bodyParts.length), () => bodyParts.push(part));
                         }
                     }
                     // todo - balance if multiple expandos provided
                     if (expandoPart) {
-                        _.times(Math.floor(remaining / BODYPART_COST[MOVE]), () => bodyParts.push(expandoPart));
+                        _.times(Math.min(MAX_CREEP_SIZE - bodyParts.length, Math.floor(remaining / BODYPART_COST[MOVE]) - bodyParts.length), () => bodyParts.push(expandoPart));
                     }
                 }
-                const creation = spawn[0].spawnCreep(bodyParts, `${room.name}_${role.type}_${NAME_ID()}`, {
+                const name = `${room.name}_${role.type}_${NAME_ID()}`;
+                const creation = spawn[0].spawnCreep(bodyParts, name, {
                     memory: {
                         creepState: CreepState.Harvesting,
                         type: role.type
@@ -635,7 +663,10 @@ const ColonyDirector = {
                     directions: [BOTTOM]
                 });
                 if (creation !== OK) {
-                    console.log("couldn't create", creation, role.type, bodyParts);
+                    console.log("couldn't create", creation, name, bodyParts.length, bodyParts);
+                }
+                else {
+                    console.log("spawned", creation, name, bodyParts.length, bodyParts);
                 }
             }
             else {

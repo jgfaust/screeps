@@ -1,7 +1,5 @@
 import {Action} from "./action/Action";
 
-
-
 export type CreepRole = FixedBodyDescriptor | RatioBodyDescriptor;
 
 export interface RatioBodyDescriptor {
@@ -18,5 +16,5 @@ export interface FixedBodyDescriptor {
    actions: Action[];
 }
 
-type BodyRatio = Record<BodyPartConstant, number>;
+export type BodyRatio = Record<BodyPartConstant, number>;
 type BodyDescriptor = Record<BodyPartConstant, number | '*'>;
